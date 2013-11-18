@@ -1,5 +1,8 @@
 *.py[cod]
 
+# Configuration
+config.yml
+
 # C extensions
 *.so
 
@@ -33,3 +36,6 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Developer silliness
+*.sw[op]
