@@ -20,4 +20,10 @@ It requires a config.yml file laid out like so:
 
 At least for now, just run
 
+```
 $ python slurp.py
+```
+
+However, it only runs once and only looks at 10 hours prior.
+
+Eventually this needs to keep track of the time of the last question it saw and query back to that as its `since`.
