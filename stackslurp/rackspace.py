@@ -6,15 +6,20 @@ This module helps with auth and working with queues.
 
 import json
 import uuid
-
 from urlparse import urljoin
-
 import requests
 
+
 class Rackspace(object):
-    def __init__(self,username,api_key):
+    '''Simple Encapsulation of Auth and posting messages to CloudQueues'''
+
+    def __init__(self, username, api_key):
         self.username = username
         self.api_key = api_key
+
+        self.identity_endpoint = "https://identity.api.rackspacecloud.com/v2.0"
+
+        self.token_endpoint = self.identity_endpoint + "/tokens"
 
         # Generate a client ID for Queue usage
         self.client_id = str(uuid.uuid4())
@@ -36,27 +41,34 @@ class Rackspace(object):
                 }
             }
         }
+
         headers = {'Content-type': 'application/json'}
 
-        resp = requests.get("https://identity.api.rackspacecloud.com/v2.0/tokens",
-                            data=json.dumps(auth_data), headers=headers)
+        resp = requests.get(self.token_endpoint, data=json.dumps(auth_data),
+                            headers=headers)
         resp.raise_for_status()
         identity_data = resp.json()
         self.token = identity_data['access']['token']['id']
 
-
     def enqueue(self, messages, queue, endpoint, ttl=300):
-        '''Messages must be JSON-serializable dicts
+        '''Sends messages to the named queue on the given endpoint.
+
+        Endpoint can be PublicNet or ServiceNet.
+
+        Messages must be JSON-serializable dicts.
         '''
-        post_message_url = urljoin(endpoint, "/v1/queues/{}/messages".format(queue))
+        post_message_url = urljoin(endpoint,
+                                   "/v1/queues/{}/messages".format(queue))
+
         headers = {'Content-type': 'application/json',
                    "Client-ID": self.client_id,
                    "X-Auth-Token": self.token}
 
-        data = [{"ttl":ttl, "body": message} for message in messages]
+        data = [{"ttl": ttl, "body": message} for message in messages]
 
         print(json.dumps(data))
 
-        resp = requests.post(post_message_url, data=json.dumps(data), headers=headers)
+        resp = requests.post(post_message_url, data=json.dumps(data),
+                             headers=headers)
         print(resp.reason)
         print(resp.content)
