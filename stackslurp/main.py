@@ -1,28 +1,3 @@
-#!/usr/bin/env python
-'''
-Just a quick little prototype of a slurper for tagged StackExchange questions.
-
-It requires a config.yml file laid out like so:
-
-    stackexchange_key: 'STACKEXCHANGE_API_KEY'
-    tags:
-      - python
-      - ruby
-    site: stackoverflow
-
-    rackspace:
-      username: rgbkrk
-      api_key: 'RACKSPACE_API_KEY'
-      queue_endpoint: https://dfw.queues.api.rackspacecloud.com/
-
-    queue: 'some_queue_name'
-
-At least for now, just run
-
-$ python slurp.py
-
-'''
-
 import json
 import time
 import uuid
@@ -32,8 +7,7 @@ from urlparse import urljoin
 import requests
 import yaml
 
-stacksearch = "https://api.stackexchange.com/2.1/search"
-
+from . import stackexchange
 
 class PerilEvent(object):
     '''
@@ -59,36 +33,7 @@ class PerilEvent(object):
         return str(self.to_json())
 
 
-def get_questions(since, tags, site, stackexchange_key=None):
-    '''Get all questions tagged on site since the time provided.
-
-    >>> get_questions(since=1384752718, tags=['python'], site='stackoverflow')
-
-    '''
-
-    # When provided a list, form the proper tag string
-    if(not isinstance(tags, basestring)):
-        tags = ";".join(tags)
-
-    params = {
-        "fromdate": since,
-        "order": "desc",
-        "sort": "creation",
-        "tagged": tags,
-        "site": site,
-    }
-
-    if(stackexchange_key):
-        params["key"] = stackexchange_key
-
-    resp = requests.get(stacksearch, params=params)
-
-    data = resp.json()
-    questions = data['items']
-
-    return questions
-
-if __name__ == "__main__":
+def main():
 
     ff = open("config.yml")
     config = yaml.load(ff)
@@ -104,7 +49,7 @@ if __name__ == "__main__":
     since = int(time.time() - 3600*10)
 
     # Get all the questions since
-    questions = get_questions(since, tags, site, stackexchange_key)
+    questions = stackexchange.search_questions(since, tags, site, stackexchange_key)
 
     # Create events
     events = [PerilEvent(question["link"], question["tags"], "slerp")
