@@ -11,6 +11,7 @@ import requests
 
 
 class Rackspace(object):
+    '''Simple Encapsulation of Auth and posting messages to CloudQueues'''
 
     def __init__(self, username, api_key):
         self.username = username
@@ -50,7 +51,11 @@ class Rackspace(object):
         self.token = identity_data['access']['token']['id']
 
     def enqueue(self, messages, queue, endpoint, ttl=300):
-        '''Messages must be JSON-serializable dicts
+        '''Sends messages to the named queue on the given endpoint.
+
+        Endpoint can be PublicNet or ServiceNet.
+
+        Messages must be JSON-serializable dicts.
         '''
         post_message_url = urljoin(endpoint,
                                    "/v1/queues/{}/messages".format(queue))
