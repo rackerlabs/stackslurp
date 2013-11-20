@@ -8,6 +8,8 @@ import requests
 import yaml
 
 from . import stackexchange
+from .utils import chunks
+from .rackspace import Rackspace
 
 class PerilEvent(object):
     '''
@@ -44,40 +46,23 @@ def main():
     site = config['site']
     stackexchange_key = config['stackexchange_key']
     tags = config['tags']
+    username = config['rackspace']['username']
+    api_key = config['rackspace']['api_key']
 
     # Completely arbitrary start point
-    since = int(time.time() - 3600*10)
+    since = int(time.time() - 3600*48)
 
     # Get all the questions since
     questions = stackexchange.search_questions(since, tags, site, stackexchange_key)
 
     # Create events
-    events = [PerilEvent(question["link"], question["tags"], "slerp")
+    events = [PerilEvent(question["link"], question["tags"], "stackslurp")
               for question in questions]
 
     print(events)
 
-
-    # Authenticate with Rackspace
-    endpoint = 'https://identity.api.rackspacecloud.com/v2.0/'
-    username = config['rackspace']['username']
-    api_key = config['rackspace']['api_key']
-
-    auth_data = {
-        "auth": {
-            "RAX-KSKEY:apiKeyCredentials": {
-                "username": username,
-                "apiKey": api_key
-            }
-        }
-    }
-    headers = {'Content-type': 'application/json'}
-
-    resp = requests.get("https://identity.api.rackspacecloud.com/v2.0/tokens",
-                        data=json.dumps(auth_data), headers=headers)
-    resp.raise_for_status()
-    identity_data = resp.json()
-    token = identity_data['access']['token']['id']
+    rack = Rackspace(username, api_key)
+    rack.auth()
 
     # Now we're authenticated, time to send on to a queue
     queue_endpoint = config['rackspace']['queue_endpoint']
@@ -86,13 +71,7 @@ def main():
     client_id = str(uuid.uuid4())
 
     post_message_url = urljoin(queue_endpoint, "/v1/queues/{}/messages".format(config['queue']))
-    headers = {'Content-type': 'application/json', "Client-ID": client_id, "X-Auth-Token": token}
-
-    def chunks(lst, n):
-        """ Yield successive n-sized chunks from lst.
-        """
-        for i in xrange(0, len(lst), n):
-            yield lst[i:i+n]
+    headers = {'Content-type': 'application/json', "Client-ID": client_id, "X-Auth-Token": rack.token}
 
     # Break events up into chunks of 10, per queue limit (configurable?)
     # TODO: Figure out if more than 10 messages can be sent at one time a different way
