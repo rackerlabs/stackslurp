@@ -7,7 +7,8 @@ import requests
 search_api = "https://api.stackexchange.com/2.1/search"
 
 
-def search_questions(since, tags, site, stackexchange_key=None):
+def search_questions(since, tags, site, stackexchange_key=None, order="desc",
+                      sort_on="creation"):
     '''Get all questions with `tags` on `site` since the time provided.
 
     >>> search_questions(since=1384752718, tags=['c'], site='stackoverflow')
@@ -20,8 +21,8 @@ def search_questions(since, tags, site, stackexchange_key=None):
 
     params = {
         "fromdate": since,
-        "order": "desc",
-        "sort": "creation",
+        "order": order,
+        "sort": sort_on,
         "tagged": tags,
         "site": site,
     }
@@ -30,6 +31,7 @@ def search_questions(since, tags, site, stackexchange_key=None):
         params["key"] = stackexchange_key
 
     resp = requests.get(search_api, params=params)
+    resp.raise_for_status()
 
     data = resp.json()
     questions = data['items']
