@@ -1,7 +1,7 @@
-StackExchangeSlurper
-====================
+StackSlurp
+==========
 
-Just a quick little prototype of a slurper for tagged StackExchange questions.
+Pulls tagged questions from StackExchange and posts them to a CloudQueue.
 
 # Quick setup
 
@@ -32,8 +32,4 @@ Run it:
 $ slurp
 ```
 
-However, it only runs once and only looks at 10 hours prior.
-
-Eventually this needs to keep track of the time of the last question it saw and query back to that as its `since`.
-
-
+However, it only runs once and only looks at a week prior.
