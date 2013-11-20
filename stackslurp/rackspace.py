@@ -6,13 +6,13 @@ This module helps with auth and working with queues.
 
 import json
 import uuid
-
 from urlparse import urljoin
-
 import requests
 
+
 class Rackspace(object):
-    def __init__(self,username,api_key):
+
+    def __init__(self, username, api_key):
         self.username = username
         self.api_key = api_key
 
@@ -44,7 +44,6 @@ class Rackspace(object):
         identity_data = resp.json()
         self.token = identity_data['access']['token']['id']
 
-
     def enqueue(self, messages, queue, endpoint, ttl=300):
         '''Messages must be JSON-serializable dicts
         '''
@@ -53,7 +52,7 @@ class Rackspace(object):
                    "Client-ID": self.client_id,
                    "X-Auth-Token": self.token}
 
-        data = [{"ttl":ttl, "body": message} for message in messages]
+        data = [{"ttl": ttl, "body": message} for message in messages]
 
         print(json.dumps(data))
 

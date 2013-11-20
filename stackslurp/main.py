@@ -6,6 +6,7 @@ from . import stackexchange
 from .utils import chunks
 from .rackspace import Rackspace
 
+
 def main():
 
     ff = open("config.yml")
@@ -24,15 +25,16 @@ def main():
     queue = config['queue']
 
     # Completely arbitrary start point
-    since = int(time.time() - 60*60*24*7)
+    since = int(time.time() - 60 * 60 * 24 * 7)
 
     # Get all the questions since
-    questions = stackexchange.search_questions(since, tags, site, stackexchange_key)
+    questions = stackexchange.search_questions(since, tags,
+                                               site, stackexchange_key)
 
     # Create events
-    events = [ {"url": question["link"],
-                "tags": question["tags"],
-                "reporter": "stackslurp"} for question in questions]
+    events = [{"url": question["link"],
+              "tags": question["tags"],
+              "reporter": "stackslurp"} for question in questions]
 
     print(events)
 
@@ -43,8 +45,7 @@ def main():
     # Now we're authenticated, time to send on to a queue
     # Break events up into chunks of 10, per arbitrary queue limit
     for event_chunk in chunks(events, 10):
-      rack.enqueue(event_chunk, queue, queue_endpoint)
+        rack.enqueue(event_chunk, queue, queue_endpoint)
 
 if __name__ == "__main__":
     main()
-
