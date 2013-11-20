@@ -4,7 +4,8 @@ Utilities for pulling question data back from StackExchange sites
 
 import requests
 
-stacksearch = "https://api.stackexchange.com/2.1/search"
+search_api = "https://api.stackexchange.com/2.1/search"
+
 
 def search_questions(since, tags, site, stackexchange_key=None):
     '''Get all questions with `tags` on `site` since the time provided.
@@ -28,7 +29,7 @@ def search_questions(since, tags, site, stackexchange_key=None):
     if(stackexchange_key):
         params["key"] = stackexchange_key
 
-    resp = requests.get(stacksearch, params=params)
+    resp = requests.get(search_api, params=params)
 
     data = resp.json()
     questions = data['items']

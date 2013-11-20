@@ -16,6 +16,10 @@ class Rackspace(object):
         self.username = username
         self.api_key = api_key
 
+        self.identity_endpoint = "https://identity.api.rackspacecloud.com/v2.0"
+
+        self.token_endpoint = self.identity_endpoint + "/tokens"
+
         # Generate a client ID for Queue usage
         self.client_id = str(uuid.uuid4())
 
@@ -36,10 +40,11 @@ class Rackspace(object):
                 }
             }
         }
+
         headers = {'Content-type': 'application/json'}
 
-        resp = requests.get("https://identity.api.rackspacecloud.com/v2.0/tokens",
-                            data=json.dumps(auth_data), headers=headers)
+        resp = requests.get(self.token_endpoint, data=json.dumps(auth_data),
+                            headers=headers)
         resp.raise_for_status()
         identity_data = resp.json()
         self.token = identity_data['access']['token']['id']
@@ -47,7 +52,9 @@ class Rackspace(object):
     def enqueue(self, messages, queue, endpoint, ttl=300):
         '''Messages must be JSON-serializable dicts
         '''
-        post_message_url = urljoin(endpoint, "/v1/queues/{}/messages".format(queue))
+        post_message_url = urljoin(endpoint,
+                                   "/v1/queues/{}/messages".format(queue))
+
         headers = {'Content-type': 'application/json',
                    "Client-ID": self.client_id,
                    "X-Auth-Token": self.token}
@@ -56,6 +63,7 @@ class Rackspace(object):
 
         print(json.dumps(data))
 
-        resp = requests.post(post_message_url, data=json.dumps(data), headers=headers)
+        resp = requests.post(post_message_url, data=json.dumps(data),
+                             headers=headers)
         print(resp.reason)
         print(resp.content)
