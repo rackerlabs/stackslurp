@@ -13,14 +13,16 @@ def main():
     config = yaml.load(ff)
     ff.close()
 
-    print(config)
-
+    # StackExchange configuration
     site = config['site']
     stackexchange_key = config['stackexchange_key']
     tags = config['tags']
+
+    # Rackspace configuration
     username = config['rackspace']['username']
     api_key = config['rackspace']['api_key']
 
+    # Queue configuration
     queue_endpoint = config['rackspace']['queue_endpoint']
     queue = config['queue']
 
@@ -34,6 +36,7 @@ def main():
     # Create events
     events = [{"url": question["link"],
               "tags": question["tags"],
+              "incident_date": question["creation_date"],
               "reporter": "stackslurp"} for question in questions]
 
     print(events)
