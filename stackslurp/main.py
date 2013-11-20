@@ -84,3 +84,7 @@ def main():
       resp = requests.post(post_message_url, data=json.dumps(data), headers=headers)
       print(resp.reason)
       print(resp.content)
+
+if __name__ == "__main__":
+    main()
+
