@@ -7,8 +7,9 @@ CloudQueues.
 '''
 
 import time
-from datetime import datetime, timedelta
 import calendar
+
+from datetime import datetime, timedelta
 
 import yaml
 
@@ -36,7 +37,8 @@ def main():
     queue = config['queue']
 
     # Timing configuration
-    wait_time = int(config.get('wait_time', 60 * 10))
+    default_wait = timedelta(minutes=10)
+    wait_time = int(config.get('wait_time', default_wait.seconds))
 
     default_since = datetime.utcnow() - timedelta(days=1)
     default_since = calendar.timegm(default_since.timetuple())
