@@ -73,8 +73,7 @@ def main():
                   "incident_date": question["creation_date"],
                   "reporter": "stackslurp"} for question in questions]
 
-        print("Events:")
-        print(events)
+        print("{} Events".format(len(events)))
 
         # Authenticate with Rackspace (get a new token every time we loop here)
         rack.auth()
@@ -84,6 +83,7 @@ def main():
         for event_chunk in Utils.chunks(events, 10):
             rack.enqueue(event_chunk, queue, queue_endpoint)
 
+        print("Sleeping")
         time.sleep(wait_time)
 
 if __name__ == "__main__":
