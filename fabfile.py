@@ -1,7 +1,11 @@
 '''
 Deploys stackslurp.
 
-To use this fabfile, you'll need a local config.yml file written per README.md.
+To use this fabfile, you'll need
+
+* A local config.yml file written per the README
+* fabric installed (pip install fabric)
+* fabric-virtualenv installed
 
 To do the full deploy run
 
@@ -58,8 +62,13 @@ def supervise(venv):
     supervisor_conf_templ = '''[program:slurp]
 command = {slurp}
 user = nobody
-stdout_logfile = {logfile}
-redirect_stderr = true
+stdout_logfile = {logfile}.out
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=15
+stderr_logfile = {logfile}.err
+stderr_logfile_maxbytes=10MB
+stderr_logfile_backups=15
+redirect_stderr = false
 directory = {cwd}
 '''
     conf = supervisor_conf_templ.format(slurp=os.path.join(venv, "bin/slurp"),
