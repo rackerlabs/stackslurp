@@ -24,7 +24,7 @@ def main():
         config = yaml.load(y)
 
     # StackExchange configuration
-    site = config['site']
+    sites = config['sites']
     stackexchange_key = config['stackexchange_key']
     tags = config['tags']
 
@@ -51,9 +51,14 @@ def main():
 
     while(True):
         # Get all the questions that have been asked with our tags going back
-        # to since on site
-        questions = stackexchange.search_questions(since, tags,
-                                                   site, stackexchange_key)
+        # on all the sites
+        questions = []
+
+        for site in sites:
+            site_questions = stackexchange.search_questions(since, tags,
+                                                            site,
+                                                            stackexchange_key)
+            questions.extend(site_questions)
 
         if(len(questions) > 0):
             # Track the last creation date to get new questions on the next run
