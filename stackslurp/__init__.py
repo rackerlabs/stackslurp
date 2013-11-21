@@ -33,8 +33,8 @@ and query back to that as its `since`.
 '''
 
 __title__ = 'stackslurp'
-__version__ = '0.0.1'
-__build__ = 0x000001
+__version__ = '0.1.0'
+__build__ = 0x000100
 __author__ = 'Kyle Kelley'
 #__license__ = ''
 __copyright__ = 'Copyright 2013 Rackspace'
