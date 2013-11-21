@@ -7,8 +7,10 @@ import requests
 search_api = "https://api.stackexchange.com/2.1/search"
 
 
-def search_questions(since, tags, site, stackexchange_key=None, order="desc",
-                      sort_on="creation"):
+def search_questions(since, tags, site,
+                     stackexchange_key=None,
+                     order="desc",
+                     sort_on="creation"):
     '''Get all questions with `tags` on `site` since the time provided.
 
     >>> search_questions(since=1384752718, tags=['c'], site='stackoverflow')
