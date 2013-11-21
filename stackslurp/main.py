@@ -1,4 +1,5 @@
-import time
+from datetime import datetime, timedelta
+import calendar
 
 import yaml
 
@@ -9,11 +10,10 @@ from .rackspace import Rackspace
 
 def main():
 
-    ff = open("config.yml")
-    config = yaml.load(ff)
-    ff.close()
+    with open("config.yml") as y:
+        config = yaml.load(y)
 
-    print(config)
+    #print(config)
 
     site = config['site']
     stackexchange_key = config['stackexchange_key']
@@ -25,10 +25,11 @@ def main():
     queue = config['queue']
 
     # Completely arbitrary start point
-    since = int(time.time() - 60 * 60 * 24 * 7)
+    since = datetime.utcnow() - timedelta(days=7)
+    epoch = calendar.timegm(since.timetuple())
 
     # Get all the questions since
-    questions = stackexchange.search_questions(since, tags,
+    questions = stackexchange.search_questions(epoch, tags,
                                                site, stackexchange_key)
 
     # Create events
@@ -36,7 +37,7 @@ def main():
               "tags": question["tags"],
               "reporter": "stackslurp"} for question in questions]
 
-    print(events)
+    #print(events)
 
     # Authenticate with Rackspace
     rack = Rackspace(username, api_key)
