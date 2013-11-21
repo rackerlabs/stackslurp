@@ -21,8 +21,8 @@ except ImportError:
 
 def get_version():
     '''
-    Version slurping without importing stackslurp, since dependencies may not be
-    met until setup is run.
+    Version slurping without importing stackslurp, since dependencies may not
+    be met until setup is run.
     '''
     version_regex = re.compile(r"__version__\s+=\s+"
                                r"['\"](\d+.\d+.\d+\w*)['\"]$")
@@ -51,8 +51,10 @@ with open('requirements.txt') as reqs:
 
 setup(name='stackslurp',
       version=version,
-      description='Grab recent questions on StackExchange, send to a CloudQueue',
-      long_description=open('README.md').read(),  # Switch to generated RST later.
+      description='Grab questions on StackExchange, send to a CloudQueue',
+
+      # Switch to generated ReST later.
+      long_description=open('README.md').read(),
       author='Kyle Kelley',
       author_email='kyle.kelley@rackspace.com',
       url='',

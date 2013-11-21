@@ -66,9 +66,6 @@ class Rackspace(object):
 
         data = [{"ttl": ttl, "body": message} for message in messages]
 
-        print(json.dumps(data))
-
         resp = requests.post(post_message_url, data=json.dumps(data),
                              headers=headers)
-        print(resp.reason)
-        print(resp.content)
+        resp.raise_for_status()
