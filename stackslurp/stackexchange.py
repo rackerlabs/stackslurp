@@ -27,6 +27,7 @@ class StackExchange(object):
             "sort": sort_on,
             "tagged": tags,
             "site": site,
+            "withbody": False
         }
 
         if(stackexchange_key):
