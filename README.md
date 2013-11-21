@@ -17,7 +17,9 @@ Write a config.yml file like so:
     tags:
       - python
       - ruby
-    site: stackoverflow
+    sites:
+      - stackoverflow
+      - serverfault
 
     rackspace:
       username: rgbkrk
@@ -32,4 +34,19 @@ Run it:
 $ slurp
 ```
 
-However, it only runs once and only looks at a week prior.
+# Configuration Notes
+
+* tags
+ * There can be [up to 100 tags](https://api.stackexchange.com/docs/vectors).
+* queue
+ * The queue must exist on Rackspace, under your account, for the region you choose to use (`queue_endpoint`)
+* sites
+ * Can be any stackexchange site, but not all tags are on all sites nor do they have the same meaning (python on stackoverflow is different than python on pets.stackexchange.com)
+* stackexchange_key
+ * [Register](http://stackapps.com/apps/oauth/register) for one
+* rackspace username
+ * The username you log in to Rackspace with
+* rackspace api_key
+ * Get your API Key from account settings in the cloud control panel
+* queue_endpoint
+ * You can use public or service net. Pick from the [list of queue endpoints](http://docs.rackspace.com/queues/api/v1.0/cq-devguide/content/serviceEndpoints.html).
