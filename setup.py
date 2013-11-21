@@ -4,7 +4,6 @@
 
 import os
 import sys
-
 import re
 
 try:
@@ -53,7 +52,7 @@ with open('requirements.txt') as reqs:
 setup(name='stackslurp',
       version=version,
       description='Grab recent questions on StackExchange, send to a CloudQueue',
-      long_description=open('README.md').read(), # Switch to generated RST later.
+      long_description=open('README.md').read(),  # Switch to generated RST later.
       author='Kyle Kelley',
       author_email='kyle.kelley@rackspace.com',
       url='',
