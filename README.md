@@ -31,5 +31,3 @@ Run it:
 ```
 $ slurp
 ```
-
-However, it only runs once and only looks at a week prior.
