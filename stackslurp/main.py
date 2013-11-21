@@ -7,13 +7,12 @@ CloudQueues.
 '''
 
 import time
-import calendar
-
 from datetime import datetime, timedelta
+import calendar
 
 import yaml
 
-from . import stackexchange
+from .stackexchange import StackExchange
 from .utils import Utils
 from .rackspace import Rackspace
 
@@ -55,7 +54,7 @@ def main():
         questions = []
 
         for site in sites:
-            site_questions = stackexchange.search_questions(since, tags,
+            site_questions = StackExchange.search_questions(since, tags,
                                                             site,
                                                             stackexchange_key)
             questions.extend(site_questions)
