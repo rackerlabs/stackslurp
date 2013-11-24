@@ -16,6 +16,8 @@ from .stackexchange import StackExchange
 from .utils import Utils
 from .rackspace import Rackspace
 
+from . import __version__
+
 
 def main():
 
@@ -68,9 +70,18 @@ def main():
 
         # Create events
         events = [{"url": question["link"],
-                  "tags": question["tags"],
-                  "incident_date": question["creation_date"],
-                  "reporter": "stackslurp"} for question in questions]
+                   "tags": question["tags"],
+                   "incident_date": question["creation_date"],
+                   "origin_id": question['question_id'],
+                   "title": question['title'],
+
+                   # Provide full sourcing that can be dug up later
+                   "extra": question,
+
+                   # Announce our credentials
+                   "reporter": "stackslurp v{}".format(__version__)}
+
+                  for question in questions]
 
         print("{} Events".format(len(events)))
 

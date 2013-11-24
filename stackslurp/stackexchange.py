@@ -31,10 +31,14 @@ class StackExchange(object):
             "withbody": False
         }
 
+        headers = {
+            "Accept-Encoding": "gzip"
+        }
+
         if(stackexchange_key):
             params["key"] = stackexchange_key
 
-        resp = requests.get(cls.search_api, params=params)
+        resp = requests.get(cls.search_api, params=params, headers=headers)
         resp.raise_for_status()
 
         questions = resp.json()['items']
