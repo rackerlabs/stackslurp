@@ -15,7 +15,8 @@ class StackExchange(object):
                          order="desc",
                          sort_on="creation"):
         # Get all questions with `tags` on `site` since the time provided.
-        # >>> search_questions(since=1384752718, tags=['c'], site='stackoverflow')
+        # >>> search_questions(since=1384752718, tags=['c'],
+        # ... site='stackoverflow')
 
         # When provided a list, form the proper tag string
         if not isinstance(tags, basestring):

@@ -35,6 +35,12 @@ and query back to that as its `since`.
 __title__ = 'stackslurp'
 __version__ = '0.2.0'
 __build__ = 0x000200
-__author__ = 'Kyle Kelley'
+__author__ = 'Kyle Kelley, Ruben Orduz'
 #__license__ = ''
 __copyright__ = 'Copyright 2013 Rackspace'
+
+from . import stackexchange
+from . import rackspace
+from . import utils
+
+__all__ = ["stackexchange", "rackspace", "utils"]
