@@ -44,10 +44,12 @@ if sys.argv[-1] == 'publish':
     sys.exit()
 
 packages = ['stackslurp']
-requires = []
 
-with open('requirements.txt') as reqs:
-    requires = reqs.read().splitlines()
+requires = [
+  "PyYAML>=3.10",
+  "argparse>=1.2.1",
+  "requests>=2.0.1"
+]
 
 setup(name='stackslurp',
       version=version,
