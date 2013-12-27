@@ -18,39 +18,59 @@ from .rackspace import Rackspace
 
 from . import __version__
 
+class SlurpConfig(object):
+    def __init__(self, config_file):
+        '''Reads in a configuration file for stackslurp, intended for
+        stackslurp's console entrypoint/main
+
+        >>> config = SlurpConfig("config.yml")
+
+        >>> fh = open("config2.yml")
+        >>> config = SlurpConfig(fh)
+
+        '''
+        if isinstance(config_file, basestring):
+            config_file = open(config_file)
+
+        config = yaml.load(config_file)
+        self.handle_config_dict(config)
+
+    def handle_config_dict(self, config):
+
+        # StackExchange configuration
+        self.sites = config['sites']
+        self.stackexchange_key = config['stackexchange_key']
+        self.tags = config['tags']
+
+        # Rackspace configuration
+        self.username = config['rackspace']['username']
+        self.api_key = config['rackspace']['api_key']
+
+        # Queue configuration
+        self.queue_endpoint = config['rackspace']['queue_endpoint']
+        self.queue = config['queue']
+
+        # Timing configuration
+        default_wait = timedelta(minutes=10)
+        self.wait_time = int(config.get('wait_time', default_wait.seconds))
+
+        default_since = datetime.utcnow() - timedelta(days=1)
+        default_since = calendar.timegm(default_since.timetuple())
+
+        starting_since = config.get('starting_since', default_since)
+        self.starting_since = int(starting_since)
+
+
 
 def main():
 
     print("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
-    with open("config.yml") as y:
-        config = yaml.load(y)
-
-    # StackExchange configuration
-    sites = config['sites']
-    stackexchange_key = config['stackexchange_key']
-    tags = config['tags']
-
-    # Rackspace configuration
-    username = config['rackspace']['username']
-    api_key = config['rackspace']['api_key']
-
-    # Queue configuration
-    queue_endpoint = config['rackspace']['queue_endpoint']
-    queue = config['queue']
-
-    # Timing configuration
-    default_wait = timedelta(minutes=10)
-    wait_time = int(config.get('wait_time', default_wait.seconds))
-
-    default_since = datetime.utcnow() - timedelta(days=1)
-    default_since = calendar.timegm(default_since.timetuple())
-
-    starting_since = config.get('starting_since', default_since)
-    since = int(starting_since)
+    config = SlurpConfig("config.yml")
 
     # Get our Rackspace API set up
-    rack = Rackspace(username, api_key)
+    rack = Rackspace(config.username, config.api_key)
+    since = config.starting_since
 
     while(True):
         try:
@@ -58,10 +78,10 @@ def main():
             # on all the sites
             questions = []
 
-            for site in sites:
-                site_questions = StackExchange.search_questions(since, tags,
+            for site in config.sites:
+                site_questions = StackExchange.search_questions(since, config.tags,
                                                                 site,
-                                                                stackexchange_key)
+                                                                config.stackexchange_key)
                 questions.extend(site_questions)
 
             if(len(questions) > 0):
@@ -97,7 +117,7 @@ def main():
                 rack.enqueue(event_chunk, queue, queue_endpoint)
 
             print("Sleeping")
-            time.sleep(wait_time)
+            time.sleep(config.wait_time)
         except Exception as e:
             print("Exception on " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
             print(e)
