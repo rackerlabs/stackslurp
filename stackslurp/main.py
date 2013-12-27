@@ -13,7 +13,7 @@ import calendar
 import yaml
 
 from .stackexchange import StackExchange
-from .utils import Utils
+from . import utils
 from .rackspace import Rackspace
 
 from . import __version__
@@ -93,7 +93,7 @@ def main():
 
             # Now we're authenticated, time to send on to a queue
             # Break events up into chunks of 10, per arbitrary queue limit
-            for event_chunk in Utils.chunks(events, 10):
+            for event_chunk in utils.chunks(events, 10):
                 rack.enqueue(event_chunk, queue, queue_endpoint)
 
             print("Sleeping")
