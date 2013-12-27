@@ -21,6 +21,8 @@ from . import __version__
 
 def main():
 
+    print("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+
     with open("config.yml") as y:
         config = yaml.load(y)
 
@@ -51,50 +53,55 @@ def main():
     rack = Rackspace(username, api_key)
 
     while(True):
-        # Get all the questions that have been asked with our tags going back
-        # on all the sites
-        questions = []
+        try:
+            # Get all the questions that have been asked with our tags going back
+            # on all the sites
+            questions = []
 
-        for site in sites:
-            site_questions = StackExchange.search_questions(since, tags,
-                                                            site,
-                                                            stackexchange_key)
-            questions.extend(site_questions)
+            for site in sites:
+                site_questions = StackExchange.search_questions(since, tags,
+                                                                site,
+                                                                stackexchange_key)
+                questions.extend(site_questions)
 
-        if(len(questions) > 0):
-            # Track the last creation date to get new questions on the next run
-            # `since` is >= in the stackexchange call, so we go 1 second later
-            # so the slurper doesn't keep reporting the same last event over
-            # and over.
-            since = questions[0]["creation_date"] + 1
+            if(len(questions) > 0):
+                # Track the last creation date to get new questions on the next run
+                # `since` is >= in the stackexchange call, so we go 1 second later
+                # so the slurper doesn't keep reporting the same last event over
+                # and over.
+                since = questions[0]["creation_date"] + 1
 
-        # Create events
-        events = [{"url": question["link"],
-                   "tags": question["tags"],
-                   "incident_date": question["creation_date"],
-                   "origin_id": question['question_id'],
-                   "title": question['title'],
+            # Create events
+            events = [{"url": question["link"],
+                       "tags": question["tags"],
+                       "incident_date": question["creation_date"],
+                       "origin_id": question['question_id'],
+                       "title": question['title'],
 
-                   # Provide full sourcing that can be dug up later
-                   "extra": question,
+                       # Provide full sourcing that can be dug up later
+                       "extra": question,
 
-                   # Announce our credentials
-                   "reporter": "stackslurp v{}".format(__version__)}
+                       # Announce our credentials
+                       "reporter": "stackslurp v{}".format(__version__)}
 
-                  for question in questions]
+                      for question in questions]
 
-        print("{} Events".format(len(events)))
+            print("{} Events".format(len(events)))
 
-        # Authenticate with Rackspace (get a new token every time we loop here)
-        rack.auth()
+            # Authenticate with Rackspace (get a new token every time we loop here)
+            rack.auth()
 
-        # Now we're authenticated, time to send on to a queue
-        # Break events up into chunks of 10, per arbitrary queue limit
-        for event_chunk in Utils.chunks(events, 10):
-            rack.enqueue(event_chunk, queue, queue_endpoint)
+            # Now we're authenticated, time to send on to a queue
+            # Break events up into chunks of 10, per arbitrary queue limit
+            for event_chunk in Utils.chunks(events, 10):
+                rack.enqueue(event_chunk, queue, queue_endpoint)
 
-        print("Sleeping")
-        time.sleep(wait_time)
+            print("Sleeping")
+            time.sleep(wait_time)
+        except Exception as e:
+            print("Exception on " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+            print(e)
+
 
 if __name__ == "__main__":
     main()
