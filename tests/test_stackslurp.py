@@ -111,9 +111,19 @@ class RackspaceTestCase(unittest.TestCase):
 
         Rackspace = stackslurp.rackspace.Rackspace
 
-        rack = Rackspace("username", "password")
+        username = random.choice(["dave", "steve", "eve"])
+        api_key = "Ovaltine"
+
+        rack = Rackspace(username, api_key)
         rack.auth()
 
+        req = httpretty.last_request()
+
+        auth_received = json.loads(req.body)
+
+        creds = auth_received['auth']['RAX-KSKEY:apiKeyCredentials']
+        assert creds['username'] == username
+        assert creds['apiKey'] == api_key
         assert rack.token == self.token
 
 
