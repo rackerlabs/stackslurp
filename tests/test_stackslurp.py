@@ -78,6 +78,45 @@ class SlurpConfigTestCase(unittest.TestCase):
         assert config.wait_time == config_dict["wait_time"]
 
 
+
+class RackspaceTestCase(unittest.TestCase):
+    def setUp(self):
+        print "Setting up"
+
+        self.identity_response_dict = {
+            "access":
+                # Randomly pick a token for authentication
+                {"token":{ "id": format(random.randint(0,2**(32*4)), 'x')}},
+
+                # The next two are left out, as we're not using them right now.
+                # If they do get used, this test case should fail (which is a success).
+                #"serviceCatalog":{}, # Access points for various services
+                #"user":{} # Roles
+        }
+
+        self.token = self.identity_response_dict['access']['token']['id']
+
+        self.identity_response = json.dumps(self.identity_response_dict)
+
+    def tearDown(self):
+        pass
+
+
+    @httpretty.activate
+    def test_auth(self):
+        httpretty.register_uri(httpretty.POST,
+                               "https://identity.api.rackspacecloud.com/v2.0/tokens",
+                               body=self.identity_response,
+                               content_type="application/json")
+
+        Rackspace = stackslurp.rackspace.Rackspace
+
+        rack = Rackspace("username", "password")
+        rack.auth()
+
+        assert rack.token == self.token
+
+
 if __name__ == "__main__":
     #testSuite = unittest.TestSuite()
     #testSuite.addTest(doctest.DocTestSuite(stackslurp))

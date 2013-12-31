@@ -44,7 +44,7 @@ class Rackspace(object):
 
         headers = {'Content-type': 'application/json'}
 
-        resp = requests.get(self.token_endpoint, data=json.dumps(auth_data),
+        resp = requests.post(self.token_endpoint, data=json.dumps(auth_data),
                             headers=headers)
         resp.raise_for_status()
         identity_data = resp.json()

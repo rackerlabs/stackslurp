@@ -6,9 +6,11 @@ stackslurp's modules to read from StackExchange and send data on to
 CloudQueues.
 '''
 
+
 import time
 from datetime import datetime, timedelta
 import calendar
+import logging
 
 import yaml
 
@@ -64,7 +66,9 @@ class SlurpConfig(object):
 
 def main():
 
-    print("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+    logging.basicConfig(level=logging.DEBUG)
+
+    logging.info("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
     config = SlurpConfig("config.yml")
 
@@ -106,7 +110,7 @@ def main():
 
                       for question in questions]
 
-            print("{} Events".format(len(events)))
+            logging.info("{} Events".format(len(events)))
 
             # Authenticate with Rackspace (get a new token every time we loop here)
             rack.auth()
@@ -114,13 +118,12 @@ def main():
             # Now we're authenticated, time to send on to a queue
             # Break events up into chunks of 10, per arbitrary queue limit
             for event_chunk in utils.chunks(events, 10):
-                rack.enqueue(event_chunk, queue, queue_endpoint)
+                rack.enqueue(event_chunk, config.queue, config.queue_endpoint)
 
-            print("Sleeping")
+            logging.info("Sleeping")
             time.sleep(config.wait_time)
         except Exception as e:
-            print("Exception on " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
-            print(e)
+            logging.exception("Exception on " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
 
 if __name__ == "__main__":
