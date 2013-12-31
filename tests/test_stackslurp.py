@@ -185,6 +185,8 @@ class RackspaceTestCase(unittest.TestCase):
                 assert message['ttl'] >= 60
                 assert message['ttl'] <= 1209600
 
+                json.dumps(message['body'])
+
             response = {u'partial': False,
                         u'resources': [ resource_base + str(msg_id)
                                         for msg_id in range(len(messages)) ]}
