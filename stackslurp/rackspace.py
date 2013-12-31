@@ -70,8 +70,8 @@ class Rackspace(object):
 
         resp = requests.post(post_message_url, data=json.dumps(data),
                              headers=headers)
+        resp.raise_for_status()
 
         logging.debug("enqueue response")
         logging.debug(resp.json())
 
-        resp.raise_for_status()

@@ -109,7 +109,7 @@ class RackspaceTestCase(unittest.TestCase):
 
         Rackspace = stackslurp.rackspace.Rackspace
 
-        username = "eve" 
+        username = "eve"
         api_key = "8675309"
 
         rack = Rackspace(username, api_key)
@@ -200,6 +200,27 @@ class RackspaceTestCase(unittest.TestCase):
                                content_type="application/json")
 
         self.rack.enqueue([{'stuff':23}, {'moo':53}], queue_name, endpoint)
+
+    @httpretty.activate
+    def test_enqueue_failure(self):
+
+        endpoint = "https://dfw.queues.api.rackspacecloud.com"
+        queue_name = "my_queue"
+
+        queue_url = endpoint + "/v1/queues/{}/messages".format(queue_name)
+
+        httpretty.register_uri(httpretty.POST,
+                               queue_url,
+                               body="Service Unavailable", # Not the real message
+                               status=503,
+                               content_type="application/json")
+
+        self.rack.enqueue([{'super_critical_data': 'the cake is great'}],
+                          queue_name,
+                          endpoint)
+
+        # badRequest (400), unauthorized (401), unauthorized (406),
+        # tooManyRequests (429), itemNotFound (404), serviceUnavailable (503)
 
 if __name__ == "__main__":
 
