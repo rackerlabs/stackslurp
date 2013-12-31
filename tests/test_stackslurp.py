@@ -153,7 +153,7 @@ class RackspaceTestCase(unittest.TestCase):
 
         def queue_success_callback(request, uri, headers):
             '''
-            This callback mocks the queueing response on success
+            This callback mocks the queueing response as if successful
             '''
 
             # Get the headers stackslurp sends over
@@ -177,13 +177,21 @@ class RackspaceTestCase(unittest.TestCase):
 
             resource_base = '/v1/queues/{}/messages/'.format(their_queue_name)
 
+            assert len(messages) <= 10
+
+            # Validate their messages
+            for message in messages:
+                assert set(message.keys()) == set(['ttl','body'])
+                assert message['ttl'] >= 60
+                assert message['ttl'] <= 1209600
+
             response = {u'partial': False,
                         u'resources': [ resource_base + str(msg_id)
                                         for msg_id in range(len(messages)) ]}
 
             response = json.dumps(response)
 
-            return (200, headers, response)
+            return (201, headers, response)
 
 
         httpretty.register_uri(httpretty.POST,
