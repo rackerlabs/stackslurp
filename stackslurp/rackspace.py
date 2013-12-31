@@ -4,9 +4,11 @@ For now, this is built for Rackspace only.
 This module helps with auth and working with queues.
 '''
 
+import logging
 import json
 import uuid
 from urlparse import urljoin
+
 import requests
 
 
@@ -68,4 +70,8 @@ class Rackspace(object):
 
         resp = requests.post(post_message_url, data=json.dumps(data),
                              headers=headers)
+
+        logging.debug("enqueue response")
+        logging.debug(resp.json())
+
         resp.raise_for_status()

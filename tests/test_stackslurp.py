@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
-import unittest
+import json
 import os
 import random
-import json
+import re
 import StringIO
+import unittest
+import uuid
 
 import httpretty
 import pytest
@@ -80,6 +82,8 @@ class SlurpConfigTestCase(unittest.TestCase):
 
 
 class RackspaceTestCase(unittest.TestCase):
+
+    @httpretty.activate
     def setUp(self):
         print "Setting up"
 
@@ -97,6 +101,21 @@ class RackspaceTestCase(unittest.TestCase):
         self.token = self.identity_response_dict['access']['token']['id']
 
         self.identity_response = json.dumps(self.identity_response_dict)
+
+        httpretty.register_uri(httpretty.POST,
+                   "https://identity.api.rackspacecloud.com/v2.0/tokens",
+                   body=self.identity_response,
+                   content_type="application/json")
+
+        Rackspace = stackslurp.rackspace.Rackspace
+
+        username = "eve" 
+        api_key = "8675309"
+
+        rack = Rackspace(username, api_key)
+        rack.auth()
+
+        self.rack = rack
 
     def tearDown(self):
         pass
@@ -126,9 +145,54 @@ class RackspaceTestCase(unittest.TestCase):
         assert creds['apiKey'] == api_key
         assert rack.token == self.token
 
+    @httpretty.activate
+    def test_enqueue(self):
+
+        endpoint = "https://dfw.queues.api.rackspacecloud.com"
+        queue_name = "event_line"
+
+        def queue_success_callback(request, uri, headers):
+            '''
+            This callback mocks the queueing response on success
+            '''
+
+            # Get the headers stackslurp sends over
+            headers_dict = request.headers.dict
+
+            # Check to see that they authenticated properly
+            assert headers_dict['x-auth-token'] == self.token
+
+            # Check to make sure a valid UUID was passed in for the client
+            their_uuid = headers_dict['client-id']
+            # This will throw an exception if formatted incorrectly
+            uuid.UUID(their_uuid)
+
+            # Now we can handle their messages and send an appropriate response
+            messages = json.loads(request.body)
+
+            # Pull the queue name out of the request
+            their_queue_name = re.findall(r"queues/(\w*)/messages", uri)[0]
+
+            assert their_queue_name == queue_name
+
+            resource_base = '/v1/queues/{}/messages/'.format(their_queue_name)
+
+            response = {u'partial': False,
+                        u'resources': [ resource_base + str(msg_id)
+                                        for msg_id in range(len(messages)) ]}
+
+            response = json.dumps(response)
+
+            return (200, headers, response)
+
+
+        httpretty.register_uri(httpretty.POST,
+                               endpoint + "/v1/queues/{}/messages".format(queue_name),
+                               body=queue_success_callback,
+                               content_type="application/json")
+
+        self.rack.enqueue([{'stuff':23}, {'moo':53}], queue_name, endpoint)
 
 if __name__ == "__main__":
-    #testSuite = unittest.TestSuite()
-    #testSuite.addTest(doctest.DocTestSuite(stackslurp))
 
     unittest.main()
