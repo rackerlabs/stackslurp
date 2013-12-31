@@ -3,6 +3,7 @@
 
 
 import json
+import logging
 import os
 import random
 import re
@@ -211,19 +212,38 @@ class RackspaceTestCase(unittest.TestCase):
 
         queue_url = endpoint + "/v1/queues/{}/messages".format(queue_name)
 
+        # Most important one to test for -- server error where the service
+        # can't be used for some reason.
         httpretty.register_uri(httpretty.POST,
                                queue_url,
                                body="Service Unavailable", # Not the real message
                                status=503,
                                content_type="application/json")
 
-        self.rack.enqueue([{'super_critical_data': 'the cake is great'}],
-                          queue_name,
-                          endpoint)
+        try:
+            self.rack.enqueue([{'super_critical_data': 'the cake is great'}],
+                              queue_name,
+                              endpoint)
+        except Exception as e:
+            pass
 
-        # badRequest (400), unauthorized (401), unauthorized (406),
-        # tooManyRequests (429), itemNotFound (404), serviceUnavailable (503)
+        # Generic placeholder for the other error codes we expect
+        for message,status in [
+                                ('badRequest', 400),
+                                ('unauthorized', 401),
+                                ('unauthorized', 406),
+                                ('tooManyRequests', 429),
+                                ('itemNotFound', 404)
+                              ]:
+            httpretty.register_uri(httpretty.POST,
+                                   queue_url,
+                                   body="Needs Testing", # Not the real message
+                                   status=status,
+                                   content_type="application/json")
+
+            self.rack.enqueue([{'super_critical_data': 'the cake is great'}],
+                              queue_name,
+                              endpoint)
 
 if __name__ == "__main__":
-
     unittest.main()
