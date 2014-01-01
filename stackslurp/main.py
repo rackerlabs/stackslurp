@@ -20,6 +20,8 @@ from .rackspace import Rackspace
 
 from . import __version__
 
+logger = logging.getLogger(__name__)
+
 class SlurpConfig(object):
     def __init__(self, config_file):
         '''Reads in a configuration file for stackslurp, intended for
@@ -62,68 +64,93 @@ class SlurpConfig(object):
         starting_since = config.get('starting_since', default_since)
         self.starting_since = int(starting_since)
 
+class Slurper(object):
+    def __init__(self, slurpconfig):
+        self.config = slurpconfig
+        self.rack = Rackspace(self.config.username, self.config.api_key)
 
+    def send_events(self, events):
+        # Authenticate with Rackspace (get a new token every time we loop here)
+        self.rack.auth()
+
+        # Now we're authenticated, time to send on to a queue
+        # Break events up into chunks of 10, per arbitrary queue limit
+        for event_chunk in utils.chunks(events, 10):
+            self.rack.enqueue(event_chunk, self.config.queue, self.config.queue_endpoint)
+
+class StackSlurp(Slurper):
+    def __init__(self, slurpconfig):
+        super(StackSlurp,self).__init__(slurpconfig)
+        self.since = self.config.starting_since
+
+    def generate_events(self, since=None):
+        '''
+        Generate events for Peril. This can return between 0 and "a lot" of
+        events.
+        '''
+
+        if since==None:
+            since = self.since
+
+
+        # Get all the questions that have been asked with our tags going back
+        # on all the sites
+        questions = []
+
+        for site in self.config.sites:
+            site_questions = StackExchange.search_questions(since, self.config.tags,
+                                                            site,
+                                                            self.config.stackexchange_key)
+            questions.extend(site_questions)
+
+        if(len(questions) > 0):
+            # Track the last creation date to get new questions on the next run
+            # `since` is >= in the stackexchange call, so we go 1 second later
+            # so the slurper doesn't keep reporting the same last event over
+            # and over.
+            self.since = questions[0]["creation_date"] + 1
+
+        events = []
+
+        for question in questions:
+            event = {"url": question["link"],
+                     "tags": question["tags"],
+                     "incident_date": question["creation_date"],
+                     "origin_id": question['question_id'],
+                     "title": question['title'],
+
+                     # Provide full sourcing that can be dug up later
+                     "extra": question,
+
+                     # Announce our credentials
+                     "reporter": "stackslurp v{}".format(__version__)}
+            logger.debug("Event: ")
+            logger.debug(event)
+
+            events.append(event)
+
+        logger.info("{} Events".format(len(events)))
+
+        return events
 
 def main():
 
     logging.basicConfig(level=logging.DEBUG)
-
-    logging.info("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+    logger.info("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
     config = SlurpConfig("config.yml")
 
-    # Get our Rackspace API set up
-    rack = Rackspace(config.username, config.api_key)
-    since = config.starting_since
+    slurper = StackSlurp(config)
 
     while(True):
         try:
-            # Get all the questions that have been asked with our tags going back
-            # on all the sites
-            questions = []
+            events = slurper.generate_events()
+            slurper.send_events(events)
 
-            for site in config.sites:
-                site_questions = StackExchange.search_questions(since, config.tags,
-                                                                site,
-                                                                config.stackexchange_key)
-                questions.extend(site_questions)
-
-            if(len(questions) > 0):
-                # Track the last creation date to get new questions on the next run
-                # `since` is >= in the stackexchange call, so we go 1 second later
-                # so the slurper doesn't keep reporting the same last event over
-                # and over.
-                since = questions[0]["creation_date"] + 1
-
-            # Create events
-            events = [{"url": question["link"],
-                       "tags": question["tags"],
-                       "incident_date": question["creation_date"],
-                       "origin_id": question['question_id'],
-                       "title": question['title'],
-
-                       # Provide full sourcing that can be dug up later
-                       "extra": question,
-
-                       # Announce our credentials
-                       "reporter": "stackslurp v{}".format(__version__)}
-
-                      for question in questions]
-
-            logging.info("{} Events".format(len(events)))
-
-            # Authenticate with Rackspace (get a new token every time we loop here)
-            rack.auth()
-
-            # Now we're authenticated, time to send on to a queue
-            # Break events up into chunks of 10, per arbitrary queue limit
-            for event_chunk in utils.chunks(events, 10):
-                rack.enqueue(event_chunk, config.queue, config.queue_endpoint)
-
-            logging.info("Sleeping")
-            time.sleep(config.wait_time)
+            logger.info("Sleeping")
+            time.sleep(slurper.config.wait_time)
         except Exception as e:
-            logging.exception("Exception on " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+            logger.exception("Exception on " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
 
 if __name__ == "__main__":

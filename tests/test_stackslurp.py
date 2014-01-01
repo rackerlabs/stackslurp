@@ -220,12 +220,9 @@ class RackspaceTestCase(unittest.TestCase):
                                status=503,
                                content_type="application/json")
 
-        try:
-            self.rack.enqueue([{'super_critical_data': 'the cake is great'}],
-                              queue_name,
-                              endpoint)
-        except Exception as e:
-            pass
+        self.rack.enqueue([{'super_critical_data': 'the cake is great'}],
+                          queue_name,
+                          endpoint)
 
         # Generic placeholder for the other error codes we expect
         for message,status in [

@@ -11,6 +11,7 @@ from urlparse import urljoin
 
 import requests
 
+logger = logging.getLogger(__name__)
 
 class Rackspace(object):
     '''Simple Encapsulation of Auth and posting messages to CloudQueues'''
@@ -72,6 +73,6 @@ class Rackspace(object):
                              headers=headers)
         resp.raise_for_status()
 
-        logging.debug("enqueue response")
-        logging.debug(resp.json())
+        logger.debug("enqueue response")
+        logger.debug(resp.json())
 
