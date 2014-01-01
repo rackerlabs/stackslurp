@@ -2,7 +2,7 @@
 
 '''
 Just a simple script designed to read from a configuration file and use
-stackslurp's modules to read from StackExchange and send data on to
+stackslurp's modules to read from StackExchange, sending data on to
 CloudQueues.
 '''
 
@@ -23,54 +23,40 @@ from . import __version__
 
 logger = logging.getLogger(__name__)
 
-class SlurpConfig(object):
-    def __init__(self, config_file):
+def read_config(config_file):
         '''Reads in a configuration file for stackslurp, intended for
         stackslurp's console entrypoint/main
 
-        >>> config = SlurpConfig("config.yml")
+        >>> config = read_config("config.yml")
 
         >>> fh = open("config2.yml")
-        >>> config = SlurpConfig(fh)
+        >>> config = read_config(fh)
 
         '''
         if isinstance(config_file, basestring):
             config_file = open(config_file)
 
         config = yaml.load(config_file)
-        self.handle_config_dict(config)
-
-    def handle_config_dict(self, config):
-
-        # StackExchange configuration
-        self.sites = config['sites']
-        self.stackexchange_key = config['stackexchange_key']
-        self.tags = config['tags']
-
-        # Rackspace configuration
-        self.username = config['rackspace']['username']
-        self.api_key = config['rackspace']['api_key']
-
-        # Queue configuration
-        self.queue_endpoint = config['rackspace']['queue_endpoint']
-        self.queue = config['queue']
 
         # Timing configuration
         default_wait = timedelta(minutes=10)
-        self.wait_time = int(config.get('wait_time', default_wait.seconds))
+        config.setdefault('wait_time', default_wait.seconds)
 
         default_since = datetime.utcnow() - timedelta(days=1)
         default_since = calendar.timegm(default_since.timetuple())
 
-        starting_since = config.get('starting_since', default_since)
-        self.starting_since = int(starting_since)
+        starting_since = config.setdefault('starting_since', default_since)
+        config.setdefault('starting_since', int(starting_since))
+
+        return config
 
 class Slurper(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, slurpconfig):
         self.config = slurpconfig
-        self.rack = Rackspace(self.config.username, self.config.api_key)
+        self.rack = Rackspace(self.config['rackspace']['username'],
+                self.config['rackspace']['api_key'])
 
     @abc.abstractmethod
     def generate_events(self):
@@ -130,22 +116,23 @@ class Slurper(object):
         '''A simple utility method to send events on to Rackspace CloudQueues.
         Events need to be in the peril format shown in `generate_events`
         '''
-        # Authenticate with Rackspace (get a new token every time we loop here)
+        # Authenticate with Rackspace
+        # Get a (possibly) new token every time we use this
         self.rack.auth()
 
         # Now we're authenticated, time to send on to a queue
         # Break events up into chunks of 10, per arbitrary queue limit
         for event_chunk in utils.chunks(events, 10):
-            self.rack.enqueue(event_chunk, self.config.queue, self.config.queue_endpoint)
+            self.rack.enqueue(event_chunk, self.config['queue'], self.config['queue_endpoint'])
 
 class StackSlurp(Slurper):
     '''StackSlurp is a Slurper that pulls from StackExchange.'''
     def __init__(self, slurpconfig):
         '''Create a Slurper that pulls from StackExchange. Requires a
-        SlurpConfig
+        configuration file.
         '''
         super(StackSlurp,self).__init__(slurpconfig)
-        self.since = self.config.starting_since
+        self.since = self.config['starting_since']
 
     def generate_events(self, since=None):
         '''
@@ -156,15 +143,14 @@ class StackSlurp(Slurper):
         if since==None:
             since = self.since
 
-
         # Get all the questions that have been asked with our tags going back
         # on all the sites
         questions = []
 
-        for site in self.config.sites:
-            site_questions = StackExchange.search_questions(since, self.config.tags,
+        for site in self.config['sites']:
+            site_questions = StackExchange.search_questions(since, self.config['tags'],
                                                             site,
-                                                            self.config.stackexchange_key)
+                                                            self.config['stackexchange_key'])
             questions.extend(site_questions)
 
         if(len(questions) > 0):
@@ -202,7 +188,7 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
     logger.info("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
-    config = SlurpConfig("config.yml")
+    config = read_config("config.yml")
 
     slurper = StackSlurp(config)
 
@@ -220,7 +206,7 @@ def main():
                              datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
         logger.info("Sleeping")
-        time.sleep(slurper.config.wait_time)
+        time.sleep(slurper.config['wait_time'])
 
 
 if __name__ == "__main__":

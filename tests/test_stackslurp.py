@@ -19,7 +19,7 @@ import stackslurp
 import stackslurp.main
 
 
-class StackslurpTestCase(unittest.TestCase):
+class MainTestCase(unittest.TestCase):
     def setUp(self):
         pass
 
@@ -44,13 +44,7 @@ class StackslurpTestCase(unittest.TestCase):
 
         # TODO Add doctests
 
-class SlurpConfigTestCase(unittest.TestCase):
-    def setUp(self):
-        pass
-    def tearDown(self):
-        pass
-
-    def test_config(self):
+    def test_read_config(self):
 
         config_dict = {
                 "stackexchange_key": 'THE_SE_KEY',
@@ -67,18 +61,60 @@ class SlurpConfigTestCase(unittest.TestCase):
 
         fh = StringIO.StringIO(yaml.safe_dump(config_dict))
 
-        SlurpConfig = stackslurp.main.SlurpConfig
+        config = stackslurp.main.read_config(fh)
 
-        config = SlurpConfig(fh)
+        assert config['stackexchange_key'] == config_dict["stackexchange_key"]
+        assert config['tags'] == config_dict["tags"]
+        assert config['sites'] == config_dict["sites"]
+        assert config['rackspace']['username'] == config_dict["rackspace"]["username"]
+        assert config['rackspace']['api_key'] == config_dict["rackspace"]["api_key"]
+        assert config['rackspace']['queue_endpoint'] == config_dict["rackspace"]["queue_endpoint"]
+        assert config['queue'] == config_dict["queue"]
+        assert config['wait_time'] == config_dict["wait_time"]
 
-        assert config.stackexchange_key == config_dict["stackexchange_key"]
-        assert config.tags == config_dict["tags"]
-        assert config.sites == config_dict["sites"]
-        assert config.username == config_dict["rackspace"]["username"]
-        assert config.api_key == config_dict["rackspace"]["api_key"]
-        assert config.queue_endpoint == config_dict["rackspace"]["queue_endpoint"]
-        assert config.queue == config_dict["queue"]
-        assert config.wait_time == config_dict["wait_time"]
+
+
+class SlurperTestCase(unittest.TestCase):
+
+    class DummySlurper(stackslurp.main.Slurper):
+        def generate_events(self):
+            return [{"url": "http://blog.fict.io",
+                     "tags": ["saltstack", "rackspace", "bookstore"],
+                     "reporter":"DummySlurper"}]
+
+    def setUp(self):
+        self.config_dict = {
+                "rackspace": {"username": "user",
+                              "api_key": "rackspace_api",
+                              "queue_endpoint":
+                                "https://dfw.queues.api.rackspacecloud.com/v1/"
+                             },
+                "queue": "testing",
+                "wait_time": 300
+        }
+
+        fh = StringIO.StringIO(yaml.safe_dump(self.config_dict))
+        self.config = stackslurp.main.read_config(fh)
+
+
+
+    def tearDown(self):
+        del self.config
+        del self.config_dict
+
+    @httpretty.activate
+    def test_init(self):
+        s = self.DummySlurper(self.config)
+
+        assert s.config == self.config
+        assert s.rack.username == self.config['rackspace']['username']
+        assert s.rack.api_key == self.config['rackspace']['api_key']
+
+    def test_generate_events(self):
+        s = self.DummySlurper(self.config)
+        events = s.generate_events()
+
+
 
 
 
