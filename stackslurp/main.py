@@ -7,6 +7,7 @@ CloudQueues.
 '''
 
 
+import abc
 import time
 from datetime import datetime, timedelta
 import calendar
@@ -65,11 +66,70 @@ class SlurpConfig(object):
         self.starting_since = int(starting_since)
 
 class Slurper(object):
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, slurpconfig):
         self.config = slurpconfig
         self.rack = Rackspace(self.config.username, self.config.api_key)
 
+    @abc.abstractmethod
+    def generate_events(self):
+        '''Generate peril style events. Subclasses need to implement this for
+        their flavor of slurping.
+
+
+        Each event should be a dict in this form:
+        {
+          // Required: uniquely identifies the incident.
+          // If the incident already exists, this event will update it instead.
+          "url": "http://stackoverflow.com/questions/20218241/editable-choice-field-drop-down-box-in-django-forms",
+
+          // Required: arbitrary name for the producer.
+          // Used to distinguish manually added incidents (and debug event producers).
+          "reporter": "stackoverflow-slurp",
+
+          // Optional: id from the original service this was pulled from
+          // This is to aid later lookups
+          "origin_id": "20218241",
+
+          // Optional: Title of the event
+          "title": "Editable Choice Field Drop Down Box in Django Forms",
+
+          // Optional: array of tags to apply to the incident.
+          // Will currently *override* existing tags.
+          "tags": ["python", "django", "openstack"],
+
+          // Optional: the effective date of the incident, in seconds since the epoch.
+          "incident_date": 1384983822,
+
+          // Optional: indicate that someone is already working this issue, by Rackspace SSO login.
+          // (Required if "assigned_at" is provided.)
+          // You could automatically detect comments in a forum thread, for example.
+          "assignee": "racker1234",
+
+          // Optional: indicate when someone started working this issue.
+          // Defaults to the current time if "assignee" is provided.
+          // Format: seconds since the epoch.
+          "assigned_at": 1384983832,
+
+          // Optional: indicate that this incident has been handled and signed off on.
+          // If one of us have provided an answer on StackOverflow and it's been accepted, say.
+          // Format: seconds since the epoch.
+          "completed_at": 1384983842,
+
+          // Optional: Any additional metadata you'd like to keep
+          "extra": {}
+        }
+
+
+        '''
+        events = []
+        return events
+
     def send_events(self, events):
+        '''A simple utility method to send events on to Rackspace CloudQueues.
+        Events need to be in the peril format shown in `generate_events`
+        '''
         # Authenticate with Rackspace (get a new token every time we loop here)
         self.rack.auth()
 
@@ -79,7 +139,11 @@ class Slurper(object):
             self.rack.enqueue(event_chunk, self.config.queue, self.config.queue_endpoint)
 
 class StackSlurp(Slurper):
+    '''StackSlurp is a Slurper that pulls from StackExchange.'''
     def __init__(self, slurpconfig):
+        '''Create a Slurper that pulls from StackExchange. Requires a
+        SlurpConfig
+        '''
         super(StackSlurp,self).__init__(slurpconfig)
         self.since = self.config.starting_since
 
@@ -145,12 +209,18 @@ def main():
     while(True):
         try:
             events = slurper.generate_events()
-            slurper.send_events(events)
-
-            logger.info("Sleeping")
-            time.sleep(slurper.config.wait_time)
         except Exception as e:
-            logger.exception("Exception on " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+            logger.exception("Event generation exception at " +\
+                             datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+
+        try:
+            slurper.send_events(events)
+        except Exception as e:
+            logger.exception("Event sending exception at " +\
+                             datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+
+        logger.info("Sleeping")
+        time.sleep(slurper.config.wait_time)
 
 
 if __name__ == "__main__":
