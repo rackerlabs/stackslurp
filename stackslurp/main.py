@@ -123,7 +123,8 @@ class Slurper(object):
         # Now we're authenticated, time to send on to a queue
         # Break events up into chunks of 10, per arbitrary queue limit
         for event_chunk in utils.chunks(events, 10):
-            self.rack.enqueue(event_chunk, self.config['queue'], self.config['queue_endpoint'])
+            self.rack.enqueue(event_chunk, self.config['queue'],
+                              self.config['rackspace']['queue_endpoint'])
 
 class StackSlurp(Slurper):
     '''StackSlurp is a Slurper that pulls from StackExchange.'''
