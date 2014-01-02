@@ -82,8 +82,13 @@ class TestMain():
 class SlurperTestCase(unittest.TestCase):
 
     class DummySlurper(stackslurp.main.Slurper):
+        def __init__(self, slurpconfig):
+            super(self.__class__, self).__init__(slurpconfig)
+            self.ctr = 0
+
         def generate_events(self):
-            return [{"url": "http://blog.fict.io",
+            self.ctr = self.ctr + 1
+            return [{"url": "http://blog.fict.io/{}".format(self.ctr),
                      "tags": ["saltstack", "rackspace", "bookstore"],
                      "reporter":"DummySlurper"}]
 
@@ -138,8 +143,13 @@ class SlurperTestCase(unittest.TestCase):
         s.rack = FakeSpace(self.config['rackspace']['username'],self.config['rackspace']['api_key'])
 
         events = s.generate_events()
+        events2 = s.generate_events()
 
         s.send_events(events)
+        s.send_events(events2)
+        assert events != events2 # sanity check
+
+        assert s.rack.fakequeue == events + events2
 
 
 class RackspaceTestCase(unittest.TestCase):
@@ -297,6 +307,36 @@ class RackspaceTestCase(unittest.TestCase):
         #    self.rack.enqueue([{'super_critical_data': 'the cake is great'}],
         #                      queue_name,
         #                      endpoint)
+
+
+class TestStackExchange(object):
+
+    def search_callback(request, uri, headers):
+        print(request)
+        print(uri)
+        print(headers)
+
+
+    @httpretty.activate
+    def test_search_questions(self):
+
+        httpretty.register_uri(httpretty.GET, "https://api.stackexchange.com/2.1/search"
+                               body=queue_success_callback)
+
+        # It should use a stackexchange key if provided
+
+        # It should hanlde not having a stackexchange key gracefully
+
+        # It should handle tags as a list
+
+        # It should handle a single tag
+
+        # It should handle a string of tags, separated by commas
+
+        # It should handle when the response is gzip encoded
+
+        # It should handle when the reponse isn't gzip encoded
+
 
 if __name__ == "__main__":
     unittest.main()
