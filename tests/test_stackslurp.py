@@ -309,21 +309,32 @@ class RackspaceTestCase(unittest.TestCase):
         #                      endpoint)
 
 
+def search_callback(request, uri, headers):
+    print(request)
+    print(uri)
+    print(headers)
+
+    return (418, headers, "I'm a teapot.")
+
 class TestStackExchange(object):
-
-    def search_callback(request, uri, headers):
-        print(request)
-        print(uri)
-        print(headers)
-
 
     @httpretty.activate
     def test_search_questions(self):
 
-        httpretty.register_uri(httpretty.GET, "https://api.stackexchange.com/2.1/search"
-                               body=queue_success_callback)
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=search_callback)
+
+        StackExchange = stackslurp.stackexchange.StackExchange
+        search_questions = StackExchange.search_questions
+
+
+        #since = calendar.timegm((datetime.utcnow() - timedelta(days=1)).timetuple())
+        since = 1388594252
 
         # It should use a stackexchange key if provided
+        search_questions(since=since, tags=["python"], site="pets",
+                stackexchange_key="superkey", order="desc", sort_on="creation")
 
         # It should hanlde not having a stackexchange key gracefully
 
