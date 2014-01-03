@@ -126,6 +126,25 @@ class Slurper(object):
             self.rack.enqueue(event_chunk, self.config['queue'],
                               self.config['rackspace']['queue_endpoint'])
 
+    def event_loop(self):
+        try:
+            events = self.generate_events()
+
+        except Exception as e:
+            logger.exception("Event generation exception at " +\
+                             datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+        else:
+            try:
+                self.send_events(events)
+            except Exception as e:
+                logger.exception("Event sending exception at " +\
+                                 datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+        finally:
+            logger.info("Sleeping")
+            time.sleep(self.config['wait_time'])
+            return
+
+
 class StackSlurp(Slurper):
     '''StackSlurp is a Slurper that pulls from StackExchange.'''
     def __init__(self, slurpconfig):
@@ -139,6 +158,9 @@ class StackSlurp(Slurper):
         '''
         Generate events for Peril. This can return between 0 and "a lot" of
         events.
+
+        This will update the value of `since` within StackSlurp (the last time
+        we pulled a question).
         '''
 
         if since==None:
@@ -185,7 +207,6 @@ class StackSlurp(Slurper):
         return events
 
 def main():
-
     logging.basicConfig(level=logging.DEBUG)
     logger.info("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
@@ -194,21 +215,7 @@ def main():
     slurper = StackSlurp(config)
 
     while(True):
-        try:
-            events = slurper.generate_events()
-        except Exception as e:
-            logger.exception("Event generation exception at " +\
-                             datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
-
-        try:
-            slurper.send_events(events)
-        except Exception as e:
-            logger.exception("Event sending exception at " +\
-                             datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
-
-        logger.info("Sleeping")
-        time.sleep(slurper.config['wait_time'])
-
+        slurper.event_loop()
 
 if __name__ == "__main__":
     main()

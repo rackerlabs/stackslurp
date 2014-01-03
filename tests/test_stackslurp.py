@@ -19,7 +19,94 @@ import yaml
 import stackslurp
 import stackslurp.main
 
-class TestUtils():
+
+
+@httpretty.activate
+class FakeSpace(stackslurp.rackspace.Rackspace):
+    '''Mock for Rackspace'''
+    def __init__(self, username, api_key):
+        self.username = username
+        self.api_key = api_key
+        self.identity_endpoint = "http://seemslegit.io/v2.0"
+        self.token_endpoint = self.identity_endpoint + "/tokens"
+
+        self.client_id = str(uuid.uuid4())
+
+        self.fakequeue = []
+
+    def auth(self):
+        self.token = "seemslegit"
+
+    def enqueue(self, messages, queue, endpoint, ttl=300):
+        self.fakequeue.extend(messages)
+
+@httpretty.activate
+class FakeExchange(stackslurp.stackexchange.StackExchange):
+    @classmethod
+    def search_questions(cls, since, tags, site, stackexchange_key=None,
+                         order="desc", sort_on="creation"):
+        # Return a simple list of questions
+        questions = [
+                {u'answer_count': 0,
+                      u'creation_date': 1388784322,
+                      u'is_answered': False,
+                      u'last_activity_date': 1388784322,
+                      u'link': u'http://stackoverflow.com/questions/20912948/color-detection-using-opencv-python',
+                      u'owner': {u'accept_rate': 100,
+                       u'display_name': u'Vipul Sharma',
+                       u'link': u'http://stackoverflow.com/users/2840136/vipul-sharma',
+                       u'profile_image': u'http://graph.facebook.com/1187128116/picture?type=large',
+                       u'reputation': 56,
+                       u'user_id': 2840136,
+                       u'user_type': u'registered'},
+                      u'question_id': 20912948,
+                      u'score': 0,
+                      u'tags': [u'python', u'opencv'],
+                      u'title': u'color detection using opencv python',
+                      u'view_count': 11},
+                {u'answer_count': 1,
+                      u'creation_date': 1388773319,
+                      u'is_answered': False,
+                      u'last_activity_date': 1388785067,
+                      u'link': u'http://stackoverflow.com/questions/20910273/is-there-an-alternative-to-parse-qs-that-handles-semi-colons',
+                      u'owner': {u'accept_rate': 92,
+                       u'display_name': u'Kyle Kelley',
+                       u'link': u'http://stackoverflow.com/users/700228/kyle-kelley',
+                       u'profile_image': u'https://www.gravatar.com/avatar/e76c7ebc9d2e8a4b840f13cd01946437?s=128&d=identicon&r=PG',
+                       u'reputation': 2524,
+                       u'user_id': 700228,
+                       u'user_type': u'registered'},
+                      u'question_id': 20910273,
+                      u'score': 3,
+                      u'tags': [u'python', u'http', u'mocking', u'stackexchange', u'httpretty'],
+                      u'title': u'Is there an alternative to parse_qs that handles semi-colons?',
+                      u'view_count': 25},
+                     ]
+
+        return questions
+
+@pytest.fixture(scope="session")
+def stackslurpconfig():
+        config_dict = {
+                "stackexchange_key": 'THE_SE_KEY',
+                "tags": ["python", "ruby"],
+                "sites": ["stackoverflow", "serverfault"],
+                "rackspace": {"username": "user",
+                              "api_key": "rackspace_api",
+                              "queue_endpoint":
+                                "https://dfw.queues.api.rackspacecloud.com/v1/"
+                             },
+                "queue": "testing",
+                "wait_time": 300
+        }
+
+        fh = StringIO.StringIO(yaml.safe_dump(config_dict))
+
+        config = stackslurp.main.read_config(fh)
+        return config
+
+
+class TestUtils(object):
     def test_chunks(self):
         chunks = stackslurp.utils.chunks
 
@@ -29,7 +116,7 @@ class TestUtils():
         assert num_chunks.next() == [6, 7, 8]
         assert num_chunks.next() == [9]
 
-class TestMain():
+class TestMain(object):
     def test_entry_points(self):
         stackslurp
         stackslurp.main
@@ -66,6 +153,7 @@ class TestMain():
         assert config['wait_time'] == config_dict["wait_time"]
 
         temp_file = tmpdir.mkdir("config2").join("testconfig.yml")
+        config_dict['tags'] = ["go", "node.js"]
         temp_file.write(yaml.safe_dump(config_dict))
 
         config2 = stackslurp.main.read_config(str(temp_file))
@@ -78,7 +166,28 @@ class TestMain():
         assert config2['queue'] == config_dict["queue"]
         assert config2['wait_time'] == config_dict["wait_time"]
 
+class TestStackSlurp(object):
+    def test_init(self, stackslurpconfig):
 
+        stackslurp.main.Rackspace = FakeSpace
+        stackslurp.main.StackExchange = FakeExchange
+
+        slurper = stackslurp.main.StackSlurp(stackslurpconfig)
+
+        assert slurper.since is not None
+        assert slurper.since == stackslurpconfig['starting_since']
+
+    def test_generate_events(self, stackslurpconfig):
+
+        stackslurp.main.Rackspace = FakeSpace
+        stackslurp.main.StackExchange = FakeExchange
+
+        slurper = stackslurp.main.StackSlurp(stackslurpconfig)
+
+        slurper.generate_events()
+        assert slurper.since == 1388784322 + 1 # one up from FakeExchange's last
+
+# TODO Turn this into py.test style
 class SlurperTestCase(unittest.TestCase):
 
     class DummySlurper(stackslurp.main.Slurper):
@@ -121,24 +230,6 @@ class SlurperTestCase(unittest.TestCase):
     @httpretty.activate
     def test_send_events(self):
 
-        class FakeSpace(stackslurp.rackspace.Rackspace):
-            def __init__(self, username, api_key):
-                self.username = username
-                self.api_key = api_key
-                self.identity_endpoint = "http://seemslegit.io/v2.0"
-                self.token_endpoint = self.identity_endpoint + "/tokens"
-
-                self.client_id = str(uuid.uuid4())
-
-                self.fakequeue = []
-
-            def auth(self):
-                self.token = "seemslegit"
-
-            def enqueue(self, messages, queue, endpoint, ttl=300):
-                self.fakequeue.extend(messages)
-
-
         s = self.DummySlurper(self.config)
         s.rack = FakeSpace(self.config['rackspace']['username'],self.config['rackspace']['api_key'])
 
@@ -151,6 +242,67 @@ class SlurperTestCase(unittest.TestCase):
 
         assert s.rack.fakequeue == events + events2
 
+    @httpretty.activate
+    def test_event_loop(self):
+        # It should throttle itself as requested
+
+        class FakeTimer(object):
+            last_sleep = None
+            def sleep(self, length):
+                # Finally getting some shut eye
+                self.last_sleep = length
+
+        timer = FakeTimer()
+
+        def please_sleep(length):
+            timer.last_sleep = length
+
+        stackslurp.main.time.sleep = please_sleep
+
+        s = self.DummySlurper(self.config)
+        s.rack = FakeSpace(self.config['rackspace']['username'],self.config['rackspace']['api_key'])
+
+        s.event_loop()
+
+        assert timer.last_sleep == self.config['wait_time']
+
+        # It should log errors from generation
+        s2 = self.DummySlurper(self.config)
+        s2.rack = FakeSpace(self.config['rackspace']['username'],self.config['rackspace']['api_key'])
+
+        def tosser(*args, **kwargs):
+            raise Exception("No run for you")
+
+        s2.generate_events = tosser
+
+        class Loggie(object):
+            last_message = None
+            def exception(self, last_message):
+                self.last_message = last_message
+
+        logger2 = Loggie()
+        stackslurp.main.logger.exception = logger2.exception
+
+        s2.event_loop()
+
+        assert "generation" in logger2.last_message
+
+        # It should log errors from sending
+
+        s3 = self.DummySlurper(self.config)
+        s3.rack = FakeSpace(self.config['rackspace']['username'],self.config['rackspace']['api_key'])
+
+        def tosser(*args, **kwargs):
+            raise Exception("No run for you")
+
+        s3.send_events = tosser
+
+        logger3 = Loggie()
+        stackslurp.main.logger.exception = logger3.exception
+
+        s3.event_loop()
+
+        assert "sending" in logger3.last_message
 
 class RackspaceTestCase(unittest.TestCase):
 
@@ -278,6 +430,7 @@ class RackspaceTestCase(unittest.TestCase):
 
         queue_url = endpoint + "/v1/queues/{}/messages".format(queue_name)
 
+        # TODO: Handle errors
         ## Most important one to test for -- server error where the service
         ## can't be used for some reason.
         #httpretty.register_uri(httpretty.POST,
@@ -404,16 +557,18 @@ class TestStackExchange(object):
         # Test the test by making sure this is back to normal
         assert httpretty.core.unquote_utf8("%3B") == ";"
 
-        # It should handle when the response is gzip encoded
+        # TODO: It should handle when the response is gzip encoded
 
-        # It should handle when the response isn't gzip encoded
+        # TODO: It should handle when the response isn't gzip encoded
 
-        # It should do *something* when the quota has been reached (within
+        # TODO: It should do *something* when the quota has been reached (within
         # resp.json()['quota_remaining'])
 
-        # When there are multiple pages of results, it should aggregate them
+        # TODO: When there are multiple pages of results, it should aggregate them
         # This won't go well if there are lots, as it will have to block at
         # this point
+
+        # TODO: Handle error responses
 
 if __name__ == "__main__":
     unittest.main()
