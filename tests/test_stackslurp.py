@@ -308,22 +308,40 @@ class RackspaceTestCase(unittest.TestCase):
         #                      queue_name,
         #                      endpoint)
 
+def param_check_callback(golden_params):
 
-def search_callback(request, uri, headers):
-    print(request)
-    print(uri)
-    print(headers)
+    def param_check(params):
+        for key in golden_params:
+            assert params[key][0] == golden_params[key]
 
-    return (418, headers, "I'm a teapot.")
+    return create_callback_check(param_check)
+
+def create_callback_check(checker):
+
+    def search_callback(request, uri, headers):
+        params = request.querystring
+
+        assert 'site' in params
+
+        assert 'fromdate' in params
+
+        int(params['fromdate'][0])
+        assert 'tagged' in params
+
+        checker(params)
+
+        return (200, headers, '{"items":[]}')
+
+    return search_callback
+
+
 
 class TestStackExchange(object):
 
     @httpretty.activate
     def test_search_questions(self):
 
-        httpretty.register_uri(httpretty.GET,
-                               "https://api.stackexchange.com/2.1/search",
-                               body=search_callback)
+
 
         StackExchange = stackslurp.stackexchange.StackExchange
         search_questions = StackExchange.search_questions
@@ -333,21 +351,69 @@ class TestStackExchange(object):
         since = 1388594252
 
         # It should use a stackexchange key if provided
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=param_check_callback({'key': 'superkey'}))
         search_questions(since=since, tags=["python"], site="pets",
                 stackexchange_key="superkey", order="desc", sort_on="creation")
 
-        # It should hanlde not having a stackexchange key gracefully
+
+        # It should handle not having a stackexchange key gracefully
+        def lack_key_check(params):
+            assert 'key' not in params
+
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=create_callback_check(lack_key_check))
+        search_questions(since=since, tags=["python"], site="pets",
+                         order="desc", sort_on="creation")
+
+
+        # To get around how parse_qs works (urlparse, under the hood of
+        # httpretty), we'll leave the semi colon quoted.
+        # 
+        # See https://github.com/gabrielfalcao/HTTPretty/issues/134
+        orig_unquote = httpretty.core.unquote_utf8
+        httpretty.core.unquote_utf8 = (lambda x: x)
 
         # It should handle tags as a list
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=param_check_callback({'tagged': 'python;dog'}))
+        search_questions(since=since, tags=["python", "dog"], site="pets")
 
         # It should handle a single tag
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=param_check_callback({'tagged': 'python'}))
+        search_questions(since=since, tags=["python"], site="pets")
+
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=param_check_callback({'tagged': 'python'}))
+        search_questions(since=since, tags="python", site="pets")
 
         # It should handle a string of tags, separated by commas
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=param_check_callback({'tagged': 'python'}))
+        search_questions(since=since, tags="python", site="pets")
+
+        # Back to normal for the rest
+        httpretty.core.unquote_utf8 = orig_unquote
+        # Test the test by making sure this is back to normal
+        assert httpretty.core.unquote_utf8("%3B") == ";"
 
         # It should handle when the response is gzip encoded
 
-        # It should handle when the reponse isn't gzip encoded
+        # It should handle when the response isn't gzip encoded
 
+        # It should do *something* when the quota has been reached (within
+        # resp.json()['quota_remaining'])
+
+        # When there are multiple pages of results, it should aggregate them
+        # This won't go well if there are lots, as it will have to block at
+        # this point
 
 if __name__ == "__main__":
     unittest.main()

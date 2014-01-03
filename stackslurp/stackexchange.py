@@ -2,8 +2,11 @@
 Utilities for pulling question data back from StackExchange sites
 '''
 
+import logging
+
 import requests
 
+logger = logging.getLogger(__name__)
 
 class StackExchange(object):
 
@@ -22,6 +25,8 @@ class StackExchange(object):
         if not isinstance(tags, basestring):
             tags = ";".join(tags)
 
+        logging.info(tags)
+
         params = {
             "fromdate": since,
             "order": order,
@@ -37,6 +42,8 @@ class StackExchange(object):
 
         if(stackexchange_key):
             params["key"] = stackexchange_key
+
+        logging.info(params)
 
         resp = requests.get(cls.search_api, params=params, headers=headers)
         resp.raise_for_status()
