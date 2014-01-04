@@ -3,6 +3,9 @@
 # Configuration
 config.yml
 
+# Coverage reports
+htmlcov
+
 # C extensions
 *.so
 

@@ -4,11 +4,14 @@ For now, this is built for Rackspace only.
 This module helps with auth and working with queues.
 '''
 
+import logging
 import json
 import uuid
 from urlparse import urljoin
+
 import requests
 
+logger = logging.getLogger(__name__)
 
 class Rackspace(object):
     '''Simple Encapsulation of Auth and posting messages to CloudQueues'''
@@ -44,7 +47,7 @@ class Rackspace(object):
 
         headers = {'Content-type': 'application/json'}
 
-        resp = requests.get(self.token_endpoint, data=json.dumps(auth_data),
+        resp = requests.post(self.token_endpoint, data=json.dumps(auth_data),
                             headers=headers)
         resp.raise_for_status()
         identity_data = resp.json()
@@ -69,3 +72,7 @@ class Rackspace(object):
         resp = requests.post(post_message_url, data=json.dumps(data),
                              headers=headers)
         resp.raise_for_status()
+
+        logger.debug("enqueue response")
+        logger.debug(resp.json())
+
