@@ -107,10 +107,10 @@ class Slurper(object):
           "extra": {}
         }
 
+        generate_events should return a list of the above dicts.
 
         '''
-        events = []
-        return events
+        pass
 
     def send_events(self, events):
         '''A simple utility method to send events on to Rackspace CloudQueues.
@@ -143,6 +143,10 @@ class Slurper(object):
             logger.info("Sleeping")
             time.sleep(self.config['wait_time'])
             return
+
+    def go(self):
+        while(True):
+            self.event_loop()
 
 
 class StackSlurp(Slurper):
@@ -206,16 +210,15 @@ class StackSlurp(Slurper):
 
         return events
 
-def main():
+def main(config_file):
     logging.basicConfig(level=logging.DEBUG)
     logger.info("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
-    config = read_config("config.yml")
+    config = read_config(config_file)
 
     slurper = StackSlurp(config)
 
-    while(True):
-        slurper.event_loop()
+    slurper.go()
 
 if __name__ == "__main__":
-    main()
+    main("config.yml")

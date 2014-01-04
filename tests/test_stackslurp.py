@@ -166,6 +166,26 @@ class TestMain(object):
         assert config2['queue'] == config_dict["queue"]
         assert config2['wait_time'] == config_dict["wait_time"]
 
+    def test_main(self):
+        config_dict = {
+                "stackexchange_key": 'THE_SE_KEY',
+                "tags": ["python", "ruby"],
+                "sites": ["stackoverflow", "serverfault"],
+                "rackspace": {"username": "user",
+                              "api_key": "rackspace_api",
+                              "queue_endpoint":
+                                "https://dfw.queues.api.rackspacecloud.com/v1/"
+                             },
+                "queue": "testing",
+                "wait_time": 300
+        }
+
+        fh = StringIO.StringIO(yaml.safe_dump(config_dict))
+
+        stackslurp.main.StackSlurp.go = lambda x: x
+
+        stackslurp.main.main(fh)
+
 class TestStackSlurp(object):
     def test_init(self, stackslurpconfig):
 
