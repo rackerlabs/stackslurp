@@ -27,6 +27,7 @@ Write a config.yml file like so:
       queue_endpoint: https://dfw.queues.api.rackspacecloud.com/v1/
 
     queue: 'some_queue_name'
+    ttl: 86400
 
 Run it:
 
