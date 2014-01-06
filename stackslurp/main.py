@@ -48,6 +48,8 @@ def read_config(config_file):
         starting_since = config.setdefault('starting_since', default_since)
         config.setdefault('starting_since', int(starting_since))
 
+        config.setdefault('ttl', 86400)
+
         return config
 
 class Slurper(object):
@@ -124,7 +126,8 @@ class Slurper(object):
         # Break events up into chunks of 10, per arbitrary queue limit
         for event_chunk in utils.chunks(events, 10):
             self.rack.enqueue(event_chunk, self.config['queue'],
-                              self.config['rackspace']['queue_endpoint'])
+                              self.config['rackspace']['queue_endpoint'],
+                              self.config['ttl'])
 
     def event_loop(self):
         try:
