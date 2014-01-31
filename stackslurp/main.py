@@ -213,7 +213,7 @@ class StackSlurp(Slurper):
 
         return events
 
-def main(config_file):
+def main(config_file="config.yml"):
     logging.basicConfig(level=logging.DEBUG)
     logger.info("Starting up at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
 
