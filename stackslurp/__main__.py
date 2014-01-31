@@ -1,3 +1,3 @@
 import main
 
-main.main("config.yml")
+main.main(config_file="config.yml")
