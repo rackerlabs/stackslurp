@@ -8,7 +8,7 @@ Pulls tagged questions from StackExchange and posts them to a CloudQueue.
 Install the package
 
 ```
-pip install git+https://github.rackspace.com:DST/stackslurp.git#egg=stackslurp
+pip install git+https://github.rackspace.com/DST/stackslurp.git#egg=stackslurp
 ```
 
 Write a config.yml file like so:
