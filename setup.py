@@ -69,7 +69,7 @@ setup(name='stackslurp',
               'slurp = stackslurp.main:main',
           ]
       },
-      # license=open('LICENSE').read(),
+      license=open('LICENSE').read(),
       zip_safe=False,
       classifiers=(
           'Development Status :: 3 - Alpha',
