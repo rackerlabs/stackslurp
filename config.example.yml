@@ -1,0 +1,22 @@
+stackexchange_key: 'gobbeldygook'
+
+# StackExchange Tags
+tags:
+  - python
+
+# StackExchange Sites to poll from
+sites:
+  - stackoverflow
+  - serverfault
+
+# Rackspace Cloud Configuration
+rackspace:
+  username: icancloud
+  api_key: API_KEY
+  queue_endpoint: https://dfw.queues.api.rackspacecloud.com/v1/
+
+# Which queue to point to
+queue: test
+
+# How long to wait between each request
+wait_time: 300
