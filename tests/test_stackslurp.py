@@ -610,15 +610,15 @@ class TestStackExchange(object):
         # TODO: It should handle when the response is gzip encoded
         httpretty.register_uri(httpretty.GET,
                                "https://api.stackexchange.com/2.1/search",
-                               body=param_check_callback({'tagged': 'python'}),
-                                                         gzip_enabled=True)
+                               body=param_check_callback({'tagged': 'python'},
+                                                         gzip_enabled=True))
         search_questions(since=since, tags="python", site="pets")
 
         # TODO: It should handle when the response is not gzip encoded
         httpretty.register_uri(httpretty.GET,
                                "https://api.stackexchange.com/2.1/search",
-                               body=param_check_callback({'tagged': 'python'}),
-                                                         gzip_enabled=False)
+                               body=param_check_callback({'tagged': 'python'},
+                                                         gzip_enabled=False))
         search_questions(since=since, tags="python", site="pets")
 
         # Back to normal for the rest
