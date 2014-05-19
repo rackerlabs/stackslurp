@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
+import gzip
 import json
-import logging
-import os
 import random
 import re
 import StringIO
-import tempfile
 import unittest
 import uuid
 
@@ -18,7 +15,6 @@ import yaml
 
 import stackslurp
 import stackslurp.main
-
 
 
 @httpretty.activate
@@ -40,6 +36,7 @@ class FakeSpace(stackslurp.rackspace.Rackspace):
     def enqueue(self, messages, queue, endpoint, ttl=300):
         self.fakequeue.extend(messages)
 
+
 @httpretty.activate
 class FakeExchange(stackslurp.stackexchange.StackExchange):
     @classmethod
@@ -47,57 +44,67 @@ class FakeExchange(stackslurp.stackexchange.StackExchange):
                          order="desc", sort_on="creation"):
         # Return a simple list of questions
         questions = [
-                {u'answer_count': 0,
-                      u'creation_date': 1388784322,
-                      u'is_answered': False,
-                      u'last_activity_date': 1388784322,
-                      u'link': u'http://stackoverflow.com/questions/20912948/color-detection-using-opencv-python',
-                      u'owner': {u'accept_rate': 100,
-                       u'display_name': u'Vipul Sharma',
-                       u'link': u'http://stackoverflow.com/users/2840136/vipul-sharma',
-                       u'profile_image': u'http://graph.facebook.com/1187128116/picture?type=large',
-                       u'reputation': 56,
-                       u'user_id': 2840136,
-                       u'user_type': u'registered'},
-                      u'question_id': 20912948,
-                      u'score': 0,
-                      u'tags': [u'python', u'opencv'],
-                      u'title': u'color detection using opencv python',
-                      u'view_count': 11},
-                {u'answer_count': 1,
-                      u'creation_date': 1388773319,
-                      u'is_answered': False,
-                      u'last_activity_date': 1388785067,
-                      u'link': u'http://stackoverflow.com/questions/20910273/is-there-an-alternative-to-parse-qs-that-handles-semi-colons',
-                      u'owner': {u'accept_rate': 92,
-                       u'display_name': u'Kyle Kelley',
-                       u'link': u'http://stackoverflow.com/users/700228/kyle-kelley',
-                       u'profile_image': u'https://www.gravatar.com/avatar/e76c7ebc9d2e8a4b840f13cd01946437?s=128&d=identicon&r=PG',
-                       u'reputation': 2524,
-                       u'user_id': 700228,
-                       u'user_type': u'registered'},
-                      u'question_id': 20910273,
-                      u'score': 3,
-                      u'tags': [u'python', u'http', u'mocking', u'stackexchange', u'httpretty'],
-                      u'title': u'Is there an alternative to parse_qs that handles semi-colons?',
-                      u'view_count': 25},
-                     ]
+            {u'answer_count': 0,
+             u'creation_date': 1388784322,
+             u'is_answered': False,
+             u'last_activity_date': 1388784322,
+             u'link': (u'http://stackoverflow.com/questions/20912948/'
+                       u'color-detection-using-opencv-python'),
+             u'owner': {u'accept_rate': 100,
+                        u'display_name': u'Vipul Sharma',
+                        u'link': (u'http://stackoverflow.com/users/2840136/'
+                                  u'vipul-sharma'),
+                        u'profile_image': (u'http://graph.facebook.com/'
+                                           u'1187128116/picture?type=large'),
+                        u'reputation': 56,
+                        u'user_id': 2840136,
+                        u'user_type': u'registered'},
+             u'question_id': 20912948,
+             u'score': 0,
+             u'tags': [u'python', u'opencv'],
+             u'title': u'color detection using opencv python',
+             u'view_count': 11},
+            {u'answer_count': 1,
+             u'creation_date': 1388773319,
+             u'is_answered': False,
+             u'last_activity_date': 1388785067,
+             u'link': (u'http://stackoverflow.com/questions/20910273/is-there-'
+                       u'an-alternative-to-parse-qs-that-handles-semi-colons'),
+             u'owner': {u'accept_rate': 92,
+                        u'display_name': u'Kyle Kelley',
+                        u'link': (u'http://stackoverflow.com/users/700228/'
+                                  u'kyle-kelley'),
+                        u'profile_image': (u'https://www.gravatar.com/avatar/'
+                                           u'e76c7ebc9d2e8a4b840f13cd01946437'
+                                           u'?s=128&d=identicon&r=PG'),
+                        u'reputation': 2524,
+                        u'user_id': 700228,
+                        u'user_type': u'registered'},
+             u'question_id': 20910273,
+             u'score': 3,
+             u'tags': [u'python', u'http', u'mocking', u'stackexchange',
+                       u'httpretty'],
+             u'title': (u'Is there an alternative to parse_qs that handles'
+                        u' semi-colons?'),
+             u'view_count': 25},
+        ]
 
         return questions
+
 
 @pytest.fixture(scope="session")
 def stackslurpconfig():
         config_dict = {
-                "stackexchange_key": 'THE_SE_KEY',
-                "tags": ["python", "ruby"],
-                "sites": ["stackoverflow", "serverfault"],
-                "rackspace": {"username": "user",
-                              "api_key": "rackspace_api",
-                              "queue_endpoint":
-                                "https://dfw.queues.api.rackspacecloud.com/v1/"
-                             },
-                "queue": "testing",
-                "wait_time": 300
+            "stackexchange_key": 'THE_SE_KEY',
+            "tags": ["python", "ruby"],
+            "sites": ["stackoverflow", "serverfault"],
+            "rackspace": {
+                "username": "user",
+                "api_key": "rackspace_api",
+                "queue_endpoint": "https://dfw.queues.api.rackspacecloud.com/v1/"
+            },
+            "queue": "testing",
+            "wait_time": 300
         }
 
         fh = StringIO.StringIO(yaml.safe_dump(config_dict))
@@ -116,6 +123,7 @@ class TestUtils(object):
         assert num_chunks.next() == [6, 7, 8]
         assert num_chunks.next() == [9]
 
+
 class TestMain(object):
     def test_entry_points(self):
         stackslurp
@@ -127,16 +135,16 @@ class TestMain(object):
     def test_read_config(self, tmpdir):
 
         config_dict = {
-                "stackexchange_key": 'THE_SE_KEY',
-                "tags": ["python", "ruby"],
-                "sites": ["stackoverflow", "serverfault"],
-                "rackspace": {"username": "user",
-                              "api_key": "rackspace_api",
-                              "queue_endpoint":
-                                "https://dfw.queues.api.rackspacecloud.com/v1/"
-                             },
-                "queue": "testing",
-                "wait_time": 300
+            "stackexchange_key": 'THE_SE_KEY',
+            "tags": ["python", "ruby"],
+            "sites": ["stackoverflow", "serverfault"],
+            "rackspace": {
+                "username": "user",
+                "api_key": "rackspace_api",
+                "queue_endpoint": "https://dfw.queues.api.rackspacecloud.com/v1/"
+            },
+            "queue": "testing",
+            "wait_time": 300
         }
 
         fh = StringIO.StringIO(yaml.safe_dump(config_dict))
@@ -168,16 +176,16 @@ class TestMain(object):
 
     def test_main(self):
         config_dict = {
-                "stackexchange_key": 'THE_SE_KEY',
-                "tags": ["python", "ruby"],
-                "sites": ["stackoverflow", "serverfault"],
-                "rackspace": {"username": "user",
-                              "api_key": "rackspace_api",
-                              "queue_endpoint":
-                                "https://dfw.queues.api.rackspacecloud.com/v1/"
-                             },
-                "queue": "testing",
-                "wait_time": 300
+            "stackexchange_key": 'THE_SE_KEY',
+            "tags": ["python", "ruby"],
+            "sites": ["stackoverflow", "serverfault"],
+            "rackspace": {
+                "username": "user",
+                "api_key": "rackspace_api",
+                "queue_endpoint": "https://dfw.queues.api.rackspacecloud.com/v1/"
+            },
+            "queue": "testing",
+            "wait_time": 300
         }
 
         fh = StringIO.StringIO(yaml.safe_dump(config_dict))
@@ -185,6 +193,7 @@ class TestMain(object):
         stackslurp.main.StackSlurp.go = lambda x: x
 
         stackslurp.main.main(fh)
+
 
 class TestStackSlurp(object):
     def test_init(self, stackslurpconfig):
@@ -205,7 +214,9 @@ class TestStackSlurp(object):
         slurper = stackslurp.main.StackSlurp(stackslurpconfig)
 
         slurper.generate_events()
-        assert slurper.since == 1388784322 + 1 # one up from FakeExchange's last
+        # One up from FakeExchange's last
+        assert slurper.since == 1388784322 + 1
+
 
 # TODO Turn this into py.test style
 class SlurperTestCase(unittest.TestCase):
@@ -223,13 +234,13 @@ class SlurperTestCase(unittest.TestCase):
 
     def setUp(self):
         self.config_dict = {
-                "rackspace": {"username": "user",
-                              "api_key": "rackspace_api",
-                              "queue_endpoint":
-                                "https://dfw.queues.api.rackspacecloud.com/v1/"
-                             },
-                "queue": "testing",
-                "wait_time": 300
+            "rackspace": {
+                "username": "user",
+                "api_key": "rackspace_api",
+                "queue_endpoint": "https://dfw.queues.api.rackspacecloud.com/v1/"
+            },
+            "queue": "testing",
+            "wait_time": 300
         }
 
         fh = StringIO.StringIO(yaml.safe_dump(self.config_dict))
@@ -251,14 +262,15 @@ class SlurperTestCase(unittest.TestCase):
     def test_send_events(self):
 
         s = self.DummySlurper(self.config)
-        s.rack = FakeSpace(self.config['rackspace']['username'],self.config['rackspace']['api_key'])
+        s.rack = FakeSpace(self.config['rackspace']['username'],
+                           self.config['rackspace']['api_key'])
 
         events = s.generate_events()
         events2 = s.generate_events()
 
         s.send_events(events)
         s.send_events(events2)
-        assert events != events2 # sanity check
+        assert events != events2  # sanity check
 
         assert s.rack.fakequeue == events + events2
 
@@ -268,6 +280,7 @@ class SlurperTestCase(unittest.TestCase):
 
         class FakeTimer(object):
             last_sleep = None
+
             def sleep(self, length):
                 # Finally getting some shut eye
                 self.last_sleep = length
@@ -280,7 +293,8 @@ class SlurperTestCase(unittest.TestCase):
         stackslurp.main.time.sleep = please_sleep
 
         s = self.DummySlurper(self.config)
-        s.rack = FakeSpace(self.config['rackspace']['username'],self.config['rackspace']['api_key'])
+        s.rack = FakeSpace(self.config['rackspace']['username'],
+                           self.config['rackspace']['api_key'])
 
         s.event_loop()
 
@@ -288,7 +302,8 @@ class SlurperTestCase(unittest.TestCase):
 
         # It should log errors from generation
         s2 = self.DummySlurper(self.config)
-        s2.rack = FakeSpace(self.config['rackspace']['username'],self.config['rackspace']['api_key'])
+        s2.rack = FakeSpace(self.config['rackspace']['username'],
+                            self.config['rackspace']['api_key'])
 
         def tosser(*args, **kwargs):
             raise Exception("No run for you")
@@ -297,6 +312,7 @@ class SlurperTestCase(unittest.TestCase):
 
         class Loggie(object):
             last_message = None
+
             def exception(self, last_message):
                 self.last_message = last_message
 
@@ -310,7 +326,8 @@ class SlurperTestCase(unittest.TestCase):
         # It should log errors from sending
 
         s3 = self.DummySlurper(self.config)
-        s3.rack = FakeSpace(self.config['rackspace']['username'],self.config['rackspace']['api_key'])
+        s3.rack = FakeSpace(self.config['rackspace']['username'],
+                            self.config['rackspace']['api_key'])
 
         def tosser(*args, **kwargs):
             raise Exception("No run for you")
@@ -324,6 +341,7 @@ class SlurperTestCase(unittest.TestCase):
 
         assert "sending" in logger3.last_message
 
+
 class RackspaceTestCase(unittest.TestCase):
 
     @httpretty.activate
@@ -331,14 +349,18 @@ class RackspaceTestCase(unittest.TestCase):
         print "Setting up"
 
         self.identity_response_dict = {
-            "access":
+            "access": {
                 # Randomly pick a token for authentication
-                {"token":{ "id": format(random.randint(0,2**(32*4)), 'x')}},
+                "token": {
+                    "id": format(random.randint(0, 2**(32*4)), 'x')
+                }
+            },
 
-                # The next two are left out, as we're not using them right now.
-                # If they do get used, this test case should fail (which is a success).
-                #"serviceCatalog":{}, # Access points for various services
-                #"user":{} # Roles
+            # The next two are left out, as we're not using them right now.
+            # If they do get used, this test case should fail
+            # (which is a success).
+            #"serviceCatalog":{}, # Access points for various services
+            #"user":{} # Roles
         }
 
         self.token = self.identity_response_dict['access']['token']['id']
@@ -346,7 +368,7 @@ class RackspaceTestCase(unittest.TestCase):
         self.identity_response = json.dumps(self.identity_response_dict)
 
         httpretty.register_uri(httpretty.POST,
-                   "https://identity.api.rackspacecloud.com/v2.0/tokens",
+                              "https://identity.api.rackspacecloud.com/v2.0/tokens",
                    body=self.identity_response,
                    content_type="application/json")
 
@@ -420,27 +442,27 @@ class RackspaceTestCase(unittest.TestCase):
 
             # Validate their messages
             for message in messages:
-                assert set(message.keys()) == set(['ttl','body'])
+                assert set(message.keys()) == set(['ttl', 'body'])
                 assert message['ttl'] >= 60
                 assert message['ttl'] <= 1209600
 
                 json.dumps(message['body'])
 
             response = {u'partial': False,
-                        u'resources': [ resource_base + str(msg_id)
-                                        for msg_id in range(len(messages)) ]}
+                        u'resources': [resource_base + str(msg_id)
+                                       for msg_id in range(len(messages))]}
 
             response = json.dumps(response)
 
             return (201, headers, response)
 
-
         httpretty.register_uri(httpretty.POST,
-                               endpoint + "/v1/queues/{}/messages".format(queue_name),
+                               (endpoint +
+                                "/v1/queues/{}/messages".format(queue_name)),
                                body=queue_success_callback,
                                content_type="application/json")
 
-        self.rack.enqueue([{'stuff':23}, {'moo':53}], queue_name, endpoint)
+        self.rack.enqueue([{'stuff': 23}, {'moo': 53}], queue_name, endpoint)
 
     @httpretty.activate
     def test_enqueue_failure(self):
@@ -455,7 +477,8 @@ class RackspaceTestCase(unittest.TestCase):
         ## can't be used for some reason.
         #httpretty.register_uri(httpretty.POST,
         #                       queue_url,
-        #                       body="Service Unavailable", # Not the real message
+        #                       # Not the real message here
+        #                       body="Service Unavailable",
         #                       status=503,
         #                       content_type="application/json")
 
@@ -481,17 +504,20 @@ class RackspaceTestCase(unittest.TestCase):
         #                      queue_name,
         #                      endpoint)
 
-def param_check_callback(golden_params):
+
+def param_check_callback(golden_params, gzip_enabled=False):
 
     def param_check(params):
         for key in golden_params:
             assert params[key][0] == golden_params[key]
 
-    return create_callback_check(param_check)
+    return create_callback_check(param_check, gzip_enabled)
 
-def create_callback_check(checker):
+
+def create_callback_check(checker, gzip_enabled=False):
 
     def search_callback(request, uri, headers):
+
         params = request.querystring
 
         assert 'site' in params
@@ -503,10 +529,21 @@ def create_callback_check(checker):
 
         checker(params)
 
-        return (200, headers, '{"items":[]}')
+        body = '{"items":[]}'
+
+        if(gzip_enabled):
+            stream = StringIO.StringIO()
+            gzip_stream = gzip.GzipFile(fileobj=stream, mode='w')
+            gzip_stream.write(body)
+            gzip_stream.close()
+            body = stream.getvalue()
+            stream.close()
+
+            headers['content-encoding'] = 'gzip'
+
+        return (200, headers, body)
 
     return search_callback
-
 
 
 class TestStackExchange(object):
@@ -514,13 +551,11 @@ class TestStackExchange(object):
     @httpretty.activate
     def test_search_questions(self):
 
-
-
         StackExchange = stackslurp.stackexchange.StackExchange
         search_questions = StackExchange.search_questions
 
-
-        #since = calendar.timegm((datetime.utcnow() - timedelta(days=1)).timetuple())
+        #since = calendar.timegm((datetime.utcnow() -
+        #                         timedelta(days=1)).timetuple())
         since = 1388594252
 
         # It should use a stackexchange key if provided
@@ -528,8 +563,8 @@ class TestStackExchange(object):
                                "https://api.stackexchange.com/2.1/search",
                                body=param_check_callback({'key': 'superkey'}))
         search_questions(since=since, tags=["python"], site="pets",
-                stackexchange_key="superkey", order="desc", sort_on="creation")
-
+                         stackexchange_key="superkey", order="desc",
+                         sort_on="creation")
 
         # It should handle not having a stackexchange key gracefully
         def lack_key_check(params):
@@ -541,10 +576,9 @@ class TestStackExchange(object):
         search_questions(since=since, tags=["python"], site="pets",
                          order="desc", sort_on="creation")
 
-
         # To get around how parse_qs works (urlparse, under the hood of
         # httpretty), we'll leave the semi colon quoted.
-        # 
+        #
         # See https://github.com/gabrielfalcao/HTTPretty/issues/134
         orig_unquote = httpretty.core.unquote_utf8
         httpretty.core.unquote_utf8 = (lambda x: x)
@@ -552,7 +586,8 @@ class TestStackExchange(object):
         # It should handle tags as a list
         httpretty.register_uri(httpretty.GET,
                                "https://api.stackexchange.com/2.1/search",
-                               body=param_check_callback({'tagged': 'python;dog'}))
+                               body=param_check_callback({'tagged':
+                                                          'python;dog'}))
         search_questions(since=since, tags=["python", "dog"], site="pets")
 
         # It should handle a single tag
@@ -572,19 +607,29 @@ class TestStackExchange(object):
                                body=param_check_callback({'tagged': 'python'}))
         search_questions(since=since, tags="python", site="pets")
 
+        # TODO: It should handle when the response is gzip encoded
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=param_check_callback({'tagged': 'python'},
+                                                         gzip_enabled=True))
+        search_questions(since=since, tags="python", site="pets")
+
+        # TODO: It should handle when the response is not gzip encoded
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=param_check_callback({'tagged': 'python'},
+                                                         gzip_enabled=False))
+        search_questions(since=since, tags="python", site="pets")
+
         # Back to normal for the rest
         httpretty.core.unquote_utf8 = orig_unquote
         # Test the test by making sure this is back to normal
         assert httpretty.core.unquote_utf8("%3B") == ";"
 
-        # TODO: It should handle when the response is gzip encoded
+        # TODO: It should do *something* when the quota has been reached
+        # (within resp.json()['quota_remaining'])
 
-        # TODO: It should handle when the response isn't gzip encoded
-
-        # TODO: It should do *something* when the quota has been reached (within
-        # resp.json()['quota_remaining'])
-
-        # TODO: When there are multiple pages of results, it should aggregate them
+        # TODO: When there are multiple pages of results, it should aggregate
         # This won't go well if there are lots, as it will have to block at
         # this point
 
