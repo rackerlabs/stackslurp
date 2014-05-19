@@ -481,17 +481,19 @@ class RackspaceTestCase(unittest.TestCase):
         #                      queue_name,
         #                      endpoint)
 
-def param_check_callback(golden_params):
+def param_check_callback(golden_params, gzip_enabled=False):
 
     def param_check(params):
         for key in golden_params:
             assert params[key][0] == golden_params[key]
 
-    return create_callback_check(param_check)
+    return create_callback_check(param_check, gzip_enabled)
 
-def create_callback_check(checker):
+def create_callback_check(checker, gzip_enabled=False):
 
     def search_callback(request, uri, headers):
+        import gzip
+
         params = request.querystring
 
         assert 'site' in params
@@ -503,7 +505,21 @@ def create_callback_check(checker):
 
         checker(params)
 
-        return (200, headers, '{"items":[]}')
+        body = '{"items":[]}'
+
+        if(gzip_enabled):
+            import gzip
+            import StringIO
+            stream = StringIO.StringIO()
+            gzip_stream = gzip.GzipFile(fileobj=stream, mode='w')
+            gzip_stream.write(body)
+            gzip_stream.close()
+            body = stream.getvalue()
+            stream.close()
+
+            headers['content-encoding'] = 'gzip'
+
+        return (200, headers, body)
 
     return search_callback
 
@@ -513,8 +529,6 @@ class TestStackExchange(object):
 
     @httpretty.activate
     def test_search_questions(self):
-
-
 
         StackExchange = stackslurp.stackexchange.StackExchange
         search_questions = StackExchange.search_questions
@@ -544,7 +558,7 @@ class TestStackExchange(object):
 
         # To get around how parse_qs works (urlparse, under the hood of
         # httpretty), we'll leave the semi colon quoted.
-        # 
+        #
         # See https://github.com/gabrielfalcao/HTTPretty/issues/134
         orig_unquote = httpretty.core.unquote_utf8
         httpretty.core.unquote_utf8 = (lambda x: x)
@@ -572,14 +586,24 @@ class TestStackExchange(object):
                                body=param_check_callback({'tagged': 'python'}))
         search_questions(since=since, tags="python", site="pets")
 
+        # TODO: It should handle when the response is gzip encoded
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=param_check_callback({'tagged': 'python'}),
+                                                         gzip_enabled=True)
+        search_questions(since=since, tags="python", site="pets")
+
+        # TODO: It should handle when the response is not gzip encoded
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.stackexchange.com/2.1/search",
+                               body=param_check_callback({'tagged': 'python'}),
+                                                         gzip_enabled=False)
+        search_questions(since=since, tags="python", site="pets")
+
         # Back to normal for the rest
         httpretty.core.unquote_utf8 = orig_unquote
         # Test the test by making sure this is back to normal
         assert httpretty.core.unquote_utf8("%3B") == ";"
-
-        # TODO: It should handle when the response is gzip encoded
-
-        # TODO: It should handle when the response isn't gzip encoded
 
         # TODO: It should do *something* when the quota has been reached (within
         # resp.json()['quota_remaining'])
